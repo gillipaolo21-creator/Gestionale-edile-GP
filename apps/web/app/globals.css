@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* SOLID: Definizione del tema Lusso Caldo direttamente nel CSS.
+Tailwind v4 richiede questo blocco @theme per generare le utility personalizzate.
+*/
+@theme {
+  --color-brand-panna: #F9F8F6;
+  --color-brand-accent: #2C3E50;
+  --color-brand-terracotta: #A0522D;
+  --color-brand-gold: #D4AF37;
+
+  --radius-3xl: 3rem;
+  --radius-2xl: 1.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-panna text-brand-accent antialiased;
+  }
+}
+
+/* Sfondo grigio chiaro sfumato dal basso verso l'alto */
+.bg-texture {
+  background: linear-gradient(to top, #D8D5D2 0%, #E9E7E5 30%, #F3F2F0 100%);
+}
+
+@keyframes bg-drift {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 400px 400px;
+  }
+}
+
+.bg-texture>* {
+  position: relative;
+  z-index: 1;
+}
+
+/* Fix per la coerenza visuale delle icone Lucide */
+.lucide {
+  @apply stroke-current;
+}

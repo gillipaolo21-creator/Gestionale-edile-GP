@@ -1,0 +1,90 @@
+import { Commessa, Prisma } from '@bresciani/db';
+import { DocumentiService } from '../documenti/documenti.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { AppaltoVoceDto } from './dto/appalto-voce.dto';
+import { CreateCommessaDto } from './dto/create-commessa.dto';
+export declare class CommesseService {
+    private prisma;
+    private documentiService;
+    private readonly logger;
+    constructor(prisma: PrismaService, documentiService: DocumentiService);
+    findAll(): Promise<{
+        hasContrattoCliente: boolean;
+        importoCalcolato: string;
+        sals: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            progressivo: number;
+            commessaId: string;
+            dataCertificazione: Date;
+            percentualeCompletamento: Prisma.Decimal;
+            importoMaturato: Prisma.Decimal;
+            statoApprovazione: import("@bresciani/db").$Enums.StatoSAL;
+        }[];
+        fatture: {
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            commessaId: string;
+            tipoDocumento: import("@bresciani/db").$Enums.TipoDocumentoFiscale;
+            salId: string | null;
+            importoImponibile: Prisma.Decimal;
+            iva: Prisma.Decimal;
+            dataScadenza: Date;
+            statoPagamento: import("@bresciani/db").$Enums.StatoPagamento;
+        }[];
+        responsabile: string | null;
+        id: string;
+        createdAt: Date;
+        codiceIdentificativo: string;
+        tipoLavori: string;
+        nomeCantiere: string;
+        nomeCliente: string | null;
+        indirizzo: string | null;
+        citta: string | null;
+        cap: string | null;
+        budgetIniziale: Prisma.Decimal;
+        dataInizio: Date;
+        dataFinePrevista: Date | null;
+        dataInizioLavori: Date | null;
+        stato: import("@bresciani/db").$Enums.StatoCommessa;
+        updatedAt: Date;
+    }[]>;
+    getNextCode(): Promise<string>;
+    create(dto: CreateCommessaDto): Promise<Commessa>;
+    private saveAttivitaRecursive;
+    findOne(id: string): Promise<any>;
+    updateDataInizioLavori(id: string, dataInizioLavori: string | null): Promise<Commessa>;
+    close(id: string): Promise<Commessa>;
+    remove(id: string): Promise<void>;
+    getDeleteInfo(id: string): Promise<{
+        hasDocuments: boolean;
+        hasFilesOnDisk: boolean;
+    }>;
+    removeFromHome(id: string): Promise<void>;
+    getAppaltoVoci(commessaId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        parentId: string | null;
+        descrizione: string;
+        unitaMisura: string;
+        quantita: Prisma.Decimal;
+        prezzoUnitario: Prisma.Decimal;
+        avanzamentoPercent: Prisma.Decimal;
+        commessaId: string;
+    }[]>;
+    setAppaltoVoci(commessaId: string, voci: AppaltoVoceDto[]): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        parentId: string | null;
+        descrizione: string;
+        unitaMisura: string;
+        quantita: Prisma.Decimal;
+        prezzoUnitario: Prisma.Decimal;
+        avanzamentoPercent: Prisma.Decimal;
+        commessaId: string;
+    }[]>;
+}

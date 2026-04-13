@@ -1,0 +1,13 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Non bloccare i processi di build core. SOLID significa anche affidabilità del tooling.
+allowBuilds:
+  '@nestjs/core': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  msgpackr-extract: true
+  prisma: true
+  sharp: true
+  unrs-resolver: true
