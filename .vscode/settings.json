@@ -1,0 +1,28 @@
+{
+  // Forziamo la formattazione al salvataggio (utilizzerà il formatter di default del tuo VS Code per ora)
+  "editor.formatOnSave": true,
+
+  // Auto-fix di ESLint e ordine rigoroso degli import al salvataggio.
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+
+  // Pulizia file automatica
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.autoSave": "onFocusChange",
+
+  // Limite visivo per evitare righe chilometriche e illeggibili
+  "editor.rulers": [100],
+  "editor.tabSize": 2,
+
+  // Ignora i falsi positivi del linter CSS nativo per le direttive Tailwind (@tailwind, @apply, ecc.)
+  "css.lint.unknownAtRules": "ignore",
+
+  // Configurazione Tailwind per supportare utility come cva() o cn() che useremo per il design system
+  "tailwindCSS.experimental.classRegex": [
+    ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^']*)(?:'|\"|`)"]
+  ]
+}

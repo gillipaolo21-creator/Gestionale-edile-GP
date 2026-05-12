@@ -1,0 +1,277 @@
+// Configurazione Core Prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum StatoCommessa {
+  IN_PREVENTIVAZIONE
+  IN_CORSO
+  SOSPESO
+  CHIUSO
+}
+
+enum StatoAttivita {
+  PROGRAMMATA
+  IN_CORSO
+  COMPLETATA
+  SOSPESA
+}
+
+enum StatoSAL {
+  BOZZA
+  APPROVATO_DL
+  FATTURABILE
+}
+
+enum TipoDocumentoFiscale {
+  FATTURA_ATTIVA
+  FATTURA_PASSIVA
+  NOTA_CREDITO
+}
+
+enum StatoPagamento {
+  DA_PAGARE
+  PARZIALE
+  PAGATO
+}
+
+enum TipoEntitaDocumento {
+  COMMESSA
+  SAL
+  FATTURA
+  FORNITORE
+}
+
+enum StatoOCR {
+  NON_RICHIESTO
+  IN_ELABORAZIONE
+  COMPLETATO
+  FALLITO
+}
+
+enum EntitaTargetImport {
+  FORNITORI
+  LISTINO_PREZZI
+  COMPUTO_METRICO
+}
+
+enum StatoJob {
+  IN_CODA
+  IN_ELABORAZIONE
+  COMPLETATO
+  COMPLETATO_CON_ERRORI
+  FALLITO
+}
+
+enum RuoloUtente {
+  ADMIN
+  PM
+  VIEWER
+}
+
+// TipoFornitore enum rimosso: i fornitori non sono più un'entità DB separata.
+
+// -----------------------------------------------------------------------------
+// MODELLI DOMINIO
+// -----------------------------------------------------------------------------
+
+model User {
+  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email        String      @unique
+  passwordHash String      @map("password_hash")
+  ruolo        RuoloUtente @default(VIEWER)
+  nome         String?
+  cognome      String?
+  attivo       Boolean     @default(true)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  @@map("users")
+}
+
+model Commessa {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codiceIdentificativo  String        @unique @map("codice_identificativo")
+  tipoLavori            String        @map("tipo_lavori")
+  nomeCantiere          String        @map("nome_cantiere")
+  nomeCliente           String?       @map("nome_cliente")
+  indirizzo             String?       @map("indirizzo")
+  citta                 String?       @map("citta")
+  cap                   String?       @map("cap")
+  responsabile          String?       @map("responsabile")
+  budgetIniziale        Decimal       @map("budget_iniziale") @db.Decimal(12, 2)
+  dataInizio            DateTime      @map("data_inizio") @db.Date
+  dataFinePrevista      DateTime?     @map("data_fine_prevista") @db.Date
+  dataInizioLavori      DateTime?     @map("data_inizio_lavori") @db.Date
+  stato                 StatoCommessa @default(IN_PREVENTIVAZIONE)
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  attivita              Attivita[]
+  sals                  Sal[]
+  fatture               Fattura[]
+  fornitureMateriali    FornituraMateriale[]
+  fornitureServizi      FornituraServizio[]
+  appaltoVoci           AppaltoVoce[]
+  @@index([stato])
+  @@index([responsabile])
+  @@map("commesse")
+}
+
+model AppaltoVoce {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commessaId         String   @map("commessa_id") @db.Uuid
+  parentId           String?  @map("parent_id") @db.Uuid
+  descrizione        String   @db.Text
+  unitaMisura        String   @map("unita_misura")
+  quantita           Decimal  @db.Decimal(12, 3)
+  prezzoUnitario     Decimal  @map("prezzo_unitario") @db.Decimal(12, 4)
+  avanzamentoPercent Decimal  @map("avanzamento_percent") @db.Decimal(5, 2)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  parent             AppaltoVoce? @relation("AppaltoVoceTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children           AppaltoVoce[] @relation("AppaltoVoceTree")
+  commessa           Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  @@index([commessaId])
+  @@index([parentId])
+  @@map("appalto_voci")
+}
+
+model Attivita {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commessaId      String        @map("commessa_id") @db.Uuid
+  parentId        String?       @map("parent_id") @db.Uuid
+  codiceWbs       String?       @map("codice_wbs")
+  titolo          String
+  descrizione     String?       @db.Text
+  importoPrevisto Decimal       @map("importo_previsto") @db.Decimal(12, 2)
+  dataInizio      DateTime?     @map("data_inizio") @db.Date
+  dataFine        DateTime?     @map("data_fine") @db.Date
+  responsabile    String?
+  stato           StatoAttivita @default(PROGRAMMATA)
+  parent          Attivita?     @relation("SubAttivita", fields: [parentId], references: [id], onDelete: Cascade)
+  children        Attivita[]    @relation("SubAttivita")
+  commessa        Commessa      @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  @@map("attivita_commessa")
+}
+
+model FornituraMateriale {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commessaId            String   @map("commessa_id") @db.Uuid
+  fornitoreNome         String   @map("fornitore_nome")
+  importoFornitura      Decimal  @map("importo_fornitura") @db.Decimal(12, 2)
+  descrizione           String?  @db.Text
+  preventivoRiferimento String   @map("preventivo_riferimento")
+  dataPreventivo        DateTime @map("data_preventivo") @db.Date
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  commessa              Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  @@map("forniture_materiali")
+}
+
+model FornituraServizio {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commessaId            String   @map("commessa_id") @db.Uuid
+  fornitoreNome         String   @map("fornitore_nome")
+  importoFornitura      Decimal  @map("importo_fornitura") @db.Decimal(12, 2)
+  descrizione           String?  @db.Text
+  preventivoRiferimento String   @map("preventivo_riferimento")
+  dataPreventivo        DateTime @map("data_preventivo") @db.Date
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  commessa              Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  @@map("forniture_servizi")
+}
+
+model Sal {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  commessaId               String    @map("commessa_id") @db.Uuid
+  progressivo              Int
+  dataCertificazione       DateTime  @map("data_certificazione") @db.Date
+  percentualeCompletamento Decimal   @map("percentuale_completamento") @db.Decimal(5, 2)
+  importoMaturato          Decimal   @map("importo_maturato") @db.Decimal(12, 2)
+  statoApprovazione        StatoSAL  @default(BOZZA) @map("stato_approvazione")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+  commessa                 Commessa  @relation(fields: [commessaId], references: [id], onDelete: Restrict)
+  fatture                  Fattura[]
+  @@unique([commessaId, progressivo])
+  @@map("sals")
+}
+
+model Fattura {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tipoDocumento      TipoDocumentoFiscale @map("tipo_documento")
+  commessaId         String               @map("commessa_id") @db.Uuid
+  salId              String?              @map("sal_id") @db.Uuid
+  importoImponibile  Decimal              @map("importo_imponibile") @db.Decimal(12, 2)
+  iva                Decimal              @db.Decimal(12, 2)
+  dataScadenza       DateTime             @map("data_scadenza") @db.Date
+  statoPagamento     StatoPagamento       @default(DA_PAGARE) @map("stato_pagamento")
+  createdAt          DateTime             @default(now()) @map("created_at")
+  updatedAt          DateTime             @updatedAt @map("updated_at")
+  commessa           Commessa             @relation(fields: [commessaId], references: [id], onDelete: Restrict)
+  sal                Sal?                 @relation(fields: [salId], references: [id], onDelete: Restrict)
+  @@map("fatture")
+}
+
+model Documento {
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entitaTipo       TipoEntitaDocumento @map("entita_tipo")
+  entitaId         String              @map("entita_id") @db.Uuid
+  nomeFile         String              @map("nome_file")
+  storageUrl       String              @map("storage_url")
+  hashFile         String              @map("hash_file")
+
+  // SOLID: Campo categoria aggiunto per tracciare la sezione (es. "Contratti Cliente")
+  categoria        String?             @map("categoria")
+  sottocategoria   String?             @map("sottocategoria")
+
+  statoOcr         StatoOCR            @default(NON_RICHIESTO) @map("stato_ocr")
+  datiEstrattiJson Json?               @map("dati_estratti_json")
+  createdAt        DateTime            @default(now()) @map("created_at")
+  jobsImportazione JobImportazione[]
+  @@index([entitaTipo, entitaId])
+  @@index([categoria])
+  @@index([createdAt])
+  @@map("documenti")
+}
+
+model AuditLog {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String?  @map("user_id") @db.Uuid
+  userEmail     String?  @map("user_email")
+  azione        String
+  entita        String
+  entitaId      String   @map("entita_id")
+  dataPrecedente Json?   @map("data_precedente")
+  dataNuova     Json?    @map("data_nuova")
+  createdAt     DateTime @default(now()) @map("created_at")
+  @@index([entita, entitaId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model JobImportazione {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  documentoId      String             @map("documento_id") @db.Uuid
+  entitaTarget     EntitaTargetImport @map("entita_target")
+  stato            StatoJob           @default(IN_CODA)
+  totaleRecord     Int                @default(0) @map("totale_record")
+  recordProcessati Int                @default(0) @map("record_processati")
+  erroriLog        Json?              @map("errori_log")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  documento        Documento          @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+  @@map("jobs_importazione")
+}

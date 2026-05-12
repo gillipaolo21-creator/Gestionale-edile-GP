@@ -1,0 +1,60 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bresciani-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: brescianicrm
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: bresciani-redis
+    restart: always
+    ports:
+      - '6379:6379'
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: bresciani-api
+    restart: always
+    ports:
+      - '3001:3001'
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/brescianicrm
+      JWT_SECRET: change-me-in-production
+      JWT_EXPIRES_IN: 8h
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FRONTEND_URL: http://localhost:3000
+      NODE_ENV: production
+      STORAGE_BASE_PATH: /app/storage/commesse
+    volumes:
+      - commesse_storage:/app/storage/commesse
+    depends_on:
+      - postgres
+      - redis
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: bresciani-web
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  commesse_storage:
