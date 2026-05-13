@@ -123,7 +123,7 @@ export class CommesseService {
           {
             codiceIdentificativo: commessa.codiceIdentificativo,
             indirizzo: commessa.indirizzo,
-            nomeCliente: commessa.nomeCliente,
+            citta: commessa.citta,
           }
         );
       } catch (fsError) {
@@ -266,7 +266,7 @@ export class CommesseService {
       responsabile: commessa.responsabile,
       codiceIdentificativo: commessa.codiceIdentificativo,
       indirizzo: commessa.indirizzo,
-      nomeCliente: commessa.nomeCliente,
+      citta: commessa.citta,
     });
 
     return { hasDocuments: !!documento, hasFilesOnDisk };
