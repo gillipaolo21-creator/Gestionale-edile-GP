@@ -109,7 +109,7 @@ describe('DocumentiService', () => {
       'C:\\Storage\\Commesse',
       'DONATO CARLUCCI',
       '2026_001_Via Roma 1_Milano',
-      'Contratti Cliente',
+      '01_Contratto Cliente',
     );
 
     expect(mkdirMock).toHaveBeenCalledWith(expectedFolder, { recursive: true });
@@ -122,7 +122,7 @@ describe('DocumentiService', () => {
         categoria: 'Contratti Cliente',
       }),
     });
-    expect(result.storageUrl).toContain('Contratti Cliente');
+    expect(result.storageUrl).toContain('01_Contratto Cliente');
   });
 
   it('su entita non COMMESSA salva in radice e categoria null', async () => {

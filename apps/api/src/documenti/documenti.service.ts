@@ -68,20 +68,22 @@ export class DocumentiService implements OnModuleInit {
   private resolveCommessaFolderName(commessa: {
     codiceIdentificativo?: string | null;
     indirizzo?: string | null;
-    nomeCliente?: string | null;
+    citta?: string | null;
   }): string {
-    const codice = (commessa.codiceIdentificativo || 'N_D').trim() || 'N_D';
+    const rawCodice = (commessa.codiceIdentificativo || 'N_D').trim() || 'N_D';
+    // Trasforma '2026-COMM-001' in '2026_001' per nomi cartella più leggibili
+    const codice = rawCodice.replace(/-COMM-/g, '_');
     const indirizzo = (commessa.indirizzo || 'N_D').trim() || 'N_D';
-    const cliente = (commessa.nomeCliente || 'N_D').trim() || 'N_D';
+    const citta = (commessa.citta || 'N_D').trim() || 'N_D';
 
-    return `${codice}_${indirizzo}_${cliente}`;
+    return `${codice}_${indirizzo}_${citta}`;
   }
 
   private resolveCommessaFolderPath(commessa: {
     responsabile?: string | null;
     codiceIdentificativo?: string | null;
     indirizzo?: string | null;
-    nomeCliente?: string | null;
+    citta?: string | null;
   }): string {
     const pmFolder = this.formatPmFolder(commessa.responsabile);
     const commessaFolder = this.sanitizeFilename(this.resolveCommessaFolderName(commessa));
@@ -104,7 +106,7 @@ export class DocumentiService implements OnModuleInit {
     responsabile?: string | null;
     codiceIdentificativo?: string | null;
     indirizzo?: string | null;
-    nomeCliente?: string | null;
+    citta?: string | null;
   }): Promise<boolean> {
     const basePath = this.resolveCommessaFolderPath(commessa);
     try {
@@ -138,7 +140,7 @@ export class DocumentiService implements OnModuleInit {
     commessa: {
       codiceIdentificativo?: string | null;
       indirizzo?: string | null;
-      nomeCliente?: string | null;
+      citta?: string | null;
     },
   ): Promise<string> {
     try {
