@@ -3,6 +3,28 @@
 > Documento di riferimento per lo sviluppo e il completamento del sistema.
 > Aggiornato al: 11/05/2026 — **Sprint 1 completato, Sprint 2 in corso**
 
+## Contesto business
+
+STRADE E SERVIZI opera su commesse infrastrutturali e industriali con forte componente di cantiere:
+
+- opere stradali, autostrade e urbanizzazioni
+- movimento terra, plinti, fognature, pavimentazioni e cementi armati
+- immobili logistici, capannoni e poli industriali
+- gestione di grandi opere con alto peso di tempi, sicurezza, varianti e SAL
+
+Il gestionale deve quindi supportare il PM nel controllo di tempi, costi, documenti, forniture, sicurezza, avanzamento e reporting direzionale.
+
+## Cosa deve gestire un PM di commessa
+
+- Pianificazione: WBS, milestone, cronoprogramma e dipendenze tra lavorazioni
+- Economica: budget, consuntivo, forecast, margini e scostamenti
+- Contabilità: SAL, fatture, incassi, residui da fatturare
+- Cantiere: avanzamento fisico, squadre, mezzi, subappalti, criticita operative
+- Forniture: ordini, consegne, allegati, extra-costi e contestazioni
+- Documenti: versioni, scadenze, permessi, verbali, audit trail
+- Rischi: varianti, ritardi, non conformita, blocchi autorizzativi
+- Reporting: KPI di commessa per direzione e cliente
+
 ---
 
 ## 📌 Legenda Priorità
