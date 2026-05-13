@@ -72,7 +72,7 @@ export class DocumentiService implements OnModuleInit {
   }): string {
     const rawCodice = (commessa.codiceIdentificativo || 'N_D').trim() || 'N_D';
     // Trasforma '2026-COMM-001' in '2026_001' per nomi cartella più leggibili
-    const codice = rawCodice.replace(/-COMM-/, '_');
+    const codice = rawCodice.replace(/-COMM-/g, '_');
     const indirizzo = (commessa.indirizzo || 'N_D').trim() || 'N_D';
     const citta = (commessa.citta || 'N_D').trim() || 'N_D';
 
