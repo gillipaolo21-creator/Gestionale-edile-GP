@@ -578,299 +578,6 @@ function useCommesse(baseUrl, setError) {
         applyFilters
     };
 }
-const defaultFormData = ()=>({
-        codiceIdentificativo: '',
-        tipoLavori: '',
-        nomeCliente: '',
-        dataCreazione: new Date().toISOString().split('T')[0],
-        indirizzo: '',
-        citta: '',
-        cap: '',
-        responsabile: ''
-    });
-function useCommesse(baseUrl, setError) {
-    const [view, setView] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])('dashboard');
-    const [activeTab, setActiveTab] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])('sintesi');
-    const [commesse, setCommesse] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
-    const [selectedCommessa, setSelectedCommessa] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
-    const [commessaToDelete, setCommessaToDelete] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
-    const [loading, setLoading] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(true);
-    const [deleteInfo, setDeleteInfo] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(null);
-    const [formData, setFormData] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(defaultFormData());
-    const [success, setSuccess] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [submitting, setSubmitting] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [pmFolders, setPmFolders] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])([]);
-    const [pmMode, setPmMode] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])('select');
-    const [isClosing, setIsClosing] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [isDeleting, setIsDeleting] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [showCreateModal, setShowCreateModal] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [showCloseModal, setShowCloseModal] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [showDeleteModal, setShowDeleteModal] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const [showHomeDeleteModal, setShowHomeDeleteModal] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useState"])(false);
-    const fetchCommesse = async ()=>{
-        try {
-            setLoading(true);
-            const res = await fetch(`${baseUrl}/api/commesse`);
-            if (!res.ok) throw new Error('Sincronizzazione API fallita');
-            const data = await res.json();
-            setCommesse(data);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Errore di connessione al database');
-        } finally{
-            setLoading(false);
-        }
-    };
-    const fetchDeleteInfo = async (commessaId)=>{
-        try {
-            const res = await fetch(`${baseUrl}/api/commesse/${commessaId}/delete-info`);
-            if (!res.ok) throw new Error('Impossibile verificare i file della commessa');
-            const data = await res.json();
-            setDeleteInfo(data);
-        } catch  {
-            setDeleteInfo(null);
-        }
-    };
-    const suggestNextCode = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useMemo"])(()=>{
-        const year = new Date().getFullYear();
-        const count = commesse.length + 1;
-        const paddedCount = count.toString().padStart(3, '0');
-        return `${year}-COMM-${paddedCount}`;
-    }, [
-        commesse
-    ]);
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        const loadNextCode = async ()=>{
-            try {
-                const res = await fetch(`${baseUrl}/api/commesse/next-code`);
-                if (!res.ok) throw new Error('Impossibile generare il codice automatico');
-                const data = await res.json();
-                setFormData((prev)=>({
-                        ...prev,
-                        codiceIdentificativo: data.codiceIdentificativo
-                    }));
-            } catch (err) {
-                setFormData((prev)=>({
-                        ...prev,
-                        codiceIdentificativo: suggestNextCode
-                    }));
-                setError(err instanceof Error ? err.message : 'Impossibile generare il codice automatico');
-            }
-        };
-        if (showCreateModal && !formData.codiceIdentificativo) {
-            loadNextCode();
-        }
-        if (showCreateModal) {
-            fetch(`${baseUrl}/api/documenti/pm-folders`).then((r)=>r.json()).then((data)=>{
-                setPmFolders(data);
-                setPmMode(data.length > 0 ? 'select' : 'free');
-            }).catch(()=>{
-                setPmFolders([]);
-                setPmMode('free');
-            });
-        }
-    }, [
-        showCreateModal,
-        suggestNextCode,
-        baseUrl,
-        formData.codiceIdentificativo
-    ]);
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useEffect"])(()=>{
-        fetchCommesse();
-    }, [
-        baseUrl
-    ]);
-    const handleCreateCommessa = async (e)=>{
-        e.preventDefault();
-        setSubmitting(true);
-        try {
-            const res = await fetch(`${baseUrl}/api/commesse`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    codiceIdentificativo: formData.codiceIdentificativo,
-                    tipoLavori: formData.tipoLavori,
-                    nomeCantiere: `${formData.codiceIdentificativo} - ${formData.citta || formData.indirizzo}`,
-                    nomeCliente: formData.nomeCliente,
-                    dataInizio: formData.dataCreazione,
-                    indirizzo: formData.indirizzo,
-                    citta: formData.citta,
-                    cap: formData.cap,
-                    responsabile: formData.responsabile
-                })
-            });
-            if (!res.ok) {
-                const errData = await res.json().catch(()=>({}));
-                const errorMessage = Array.isArray(errData.message) ? errData.message.join(' | ') : errData.message || 'Errore fatale del server durante la registrazione';
-                throw new Error(errorMessage);
-            }
-            setSuccess(true);
-            setTimeout(()=>{
-                setSuccess(false);
-                handleCloseCreateModal();
-                fetchCommesse();
-            }, 1500);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Errore durante la creazione della commessa');
-        } finally{
-            setSubmitting(false);
-        }
-    };
-    const handleCloseCreateModal = ()=>{
-        setShowCreateModal(false);
-        setPmMode('select');
-        setPmFolders([]);
-        setFormData(defaultFormData());
-    };
-    const handleCloseCommessa = async ()=>{
-        if (!selectedCommessa) return;
-        setIsClosing(true);
-        setError(null);
-        try {
-            const res = await fetch(`${baseUrl}/api/commesse/${selectedCommessa.id}/chiudi`, {
-                method: 'PATCH'
-            });
-            if (!res.ok) {
-                const errData = await res.json().catch(()=>({}));
-                throw new Error(errData.message || 'Errore durante la chiusura');
-            }
-            setShowCloseModal(false);
-            setSelectedCommessa(null);
-            setView('dashboard');
-            fetchCommesse();
-        } catch (err) {
-            setShowCloseModal(false);
-            setError(err instanceof Error ? err.message : 'Errore durante la chiusura commessa');
-        } finally{
-            setIsClosing(false);
-        }
-    };
-    const handleDeleteCommessa = async ()=>{
-        if (!selectedCommessa) return;
-        setIsDeleting(true);
-        setError(null);
-        try {
-            const res = await fetch(`${baseUrl}/api/commesse/${selectedCommessa.id}`, {
-                method: 'DELETE'
-            });
-            if (!res.ok) {
-                const errData = await res.json().catch(()=>({}));
-                throw new Error(errData.message || 'Errore durante eliminazione commessa');
-            }
-            setShowDeleteModal(false);
-            setSelectedCommessa(null);
-            setView('dashboard');
-            fetchCommesse();
-        } catch (err) {
-            setShowDeleteModal(false);
-            setError(err instanceof Error ? err.message : 'Errore durante eliminazione commessa');
-        } finally{
-            setIsDeleting(false);
-        }
-    };
-    const handleDeleteFromHome = async ()=>{
-        if (!commessaToDelete) return;
-        setIsDeleting(true);
-        setError(null);
-        try {
-            const res = await fetch(`${baseUrl}/api/commesse/${commessaToDelete.id}/home`, {
-                method: 'DELETE'
-            });
-            if (!res.ok) {
-                const errData = await res.json().catch(()=>({}));
-                throw new Error(errData.message || 'Eliminazione non consentita dalla dashboard');
-            }
-            setShowHomeDeleteModal(false);
-            setCommessaToDelete(null);
-            fetchCommesse();
-        } catch (err) {
-            setShowHomeDeleteModal(false);
-            setError(err instanceof Error ? err.message : 'Errore durante eliminazione dalla dashboard');
-        } finally{
-            setIsDeleting(false);
-        }
-    };
-    const handleUpdateDataInizioLavori = async (date)=>{
-        if (!selectedCommessa) return;
-        try {
-            await fetch(`${baseUrl}/commesse/${selectedCommessa.id}/data-inizio-lavori`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    dataInizioLavori: date
-                })
-            });
-            setSelectedCommessa({
-                ...selectedCommessa,
-                dataInizioLavori: date
-            });
-            fetchCommesse();
-        } catch  {
-        // silent
-        }
-    };
-    const stats = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useMemo"])(()=>{
-        const totaleCommesse = commesse.reduce((acc, c)=>acc + Number(c.importoCalcolato || 0), 0);
-        const costiCommesse = commesse.reduce((acc, c)=>{
-            const costi = c.fatture?.reduce((sum, f)=>sum + Number(f.importoImponibile || 0), 0) || 0;
-            return acc + costi;
-        }, 0);
-        const avanzamento = commesse.length > 0 ? commesse.reduce((acc, c)=>acc + (c.sals?.[0]?.percentualeCompletamento || 0), 0) / commesse.length : 0;
-        return {
-            totaleCommesse,
-            costiCommesse,
-            avanzamento: avanzamento.toFixed(1)
-        };
-    }, [
-        commesse
-    ]);
-    return {
-        view,
-        setView,
-        activeTab,
-        setActiveTab,
-        commesse,
-        selectedCommessa,
-        setSelectedCommessa,
-        commessaToDelete,
-        setCommessaToDelete,
-        loading,
-        setLoading,
-        deleteInfo,
-        setDeleteInfo,
-        formData,
-        setFormData,
-        success,
-        submitting,
-        pmFolders,
-        setPmFolders,
-        pmMode,
-        setPmMode,
-        isClosing,
-        isDeleting,
-        showCreateModal,
-        setShowCreateModal,
-        showCloseModal,
-        setShowCloseModal,
-        showDeleteModal,
-        setShowDeleteModal,
-        showHomeDeleteModal,
-        setShowHomeDeleteModal,
-        fetchCommesse,
-        fetchDeleteInfo,
-        handleCreateCommessa,
-        handleCloseCreateModal,
-        handleCloseCommessa,
-        handleDeleteCommessa,
-        handleDeleteFromHome,
-        handleUpdateDataInizioLavori,
-        stats
-    };
-}
 }),
 "[project]/apps/web/app/hooks/useDocumenti.ts [app-ssr] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
@@ -2044,11 +1751,11 @@ function App() {
                             commesse.setSelectedCommessa(null);
                         },
                         className: "flex flex-col items-center gap-1.5 group px-1",
-                        title: "Bresciani Group - Home",
+                        title: "Strade & Servizi - Home",
                         children: [
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 className: "text-white font-black text-base tracking-tight leading-none group-hover:text-blue-200 transition-colors",
-                                children: "B"
+                                children: "S"
                             }, void 0, false, {
                                 fileName: "[project]/apps/web/app/page.tsx",
                                 lineNumber: 126,
@@ -2056,7 +1763,7 @@ function App() {
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                 className: "text-white/50 font-black text-[8px] tracking-widest uppercase leading-none group-hover:text-white/80 transition-colors",
-                                children: "Group"
+                                children: "S&S"
                             }, void 0, false, {
                                 fileName: "[project]/apps/web/app/page.tsx",
                                 lineNumber: 127,
@@ -2179,14 +1886,14 @@ function App() {
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("h1", {
                                 className: "text-6xl font-extralight tracking-tighter text-[#003A7D] group-hover:text-[#0054B4] transition-colors leading-none",
                                 children: [
-                                    "Bresciani ",
+                                    "Strade ",
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
                                         className: "font-medium",
-                                        children: "Group"
+                                        children: "& Servizi"
                                     }, void 0, false, {
                                         fileName: "[project]/apps/web/app/page.tsx",
                                         lineNumber: 170,
-                                        columnNumber: 23
+                                        columnNumber: 20
                                     }, this)
                                 ]
                             }, void 0, true, {

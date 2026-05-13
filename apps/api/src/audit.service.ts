@@ -1,5 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from './prisma/prisma.service';
+// Deprecated - replaced by new module structure
+export { }; /*
 
 export interface AuditLogEntry {
   userId?: string;
@@ -56,3 +56,5 @@ export class AuditService {
     return { data, total, page, totalPages: Math.ceil(total / limit) };
   }
 }
+*/
+

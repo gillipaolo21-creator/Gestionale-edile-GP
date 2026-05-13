@@ -1,51 +1,43 @@
-import { StatoPagamento, TipoDocumentoFiscale } from '@bresciani/db';
-import { Type } from 'class-transformer';
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsUUID, Min } from 'class-validator';
+import { IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { TipoDocumentoFiscale, StatoPagamento } from '@strade-servizi/db';
 
+/** Usato dalla route piatta POST /fatture — commessaId obbligatorio nel body */
 export class CreateFatturaDto {
-  @IsEnum(TipoDocumentoFiscale)
-  tipoDocumento!: TipoDocumentoFiscale;
+  @IsEnum(TipoDocumentoFiscale) tipoDocumento!: TipoDocumentoFiscale;
+  @IsString() commessaId!: string;
+  @IsOptional() @IsString() salId?: string;
+  @IsOptional() @IsString() numero?: string;
+  @IsOptional() @IsString() fornitoreCliente?: string;
+  @IsNumber() importoImponibile!: number;
+  @IsOptional() @IsNumber() iva?: number;
+  @IsOptional() @IsDateString() dataEmissione?: string;
+  @IsOptional() @IsDateString() dataScadenza?: string;
+  @IsOptional() @IsEnum(StatoPagamento) statoPagamento?: StatoPagamento;
+  @IsOptional() @IsString() note?: string;
+}
 
-  @IsOptional()
-  @IsUUID()
-  salId?: string;
-
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Type(() => Number)
-  importoImponibile!: number;
-
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Type(() => Number)
-  iva!: number;
-
-  @IsDateString()
-  dataScadenza!: string;
-
-  @IsOptional()
-  @IsEnum(StatoPagamento)
-  statoPagamento?: StatoPagamento;
+/** Usato dalla route nidificata POST /commesse/:id/fatture — commessaId viene dall'URL */
+export class CreateFatturaNestedDto {
+  @IsEnum(TipoDocumentoFiscale) tipoDocumento!: TipoDocumentoFiscale;
+  @IsOptional() @IsString() salId?: string;
+  @IsOptional() @IsString() numero?: string;
+  @IsOptional() @IsString() fornitoreCliente?: string;
+  @IsNumber() importoImponibile!: number;
+  @IsOptional() @IsNumber() iva?: number;
+  @IsOptional() @IsDateString() dataEmissione?: string;
+  @IsOptional() @IsDateString() dataScadenza?: string;
+  @IsOptional() @IsEnum(StatoPagamento) statoPagamento?: StatoPagamento;
+  @IsOptional() @IsString() note?: string;
 }
 
 export class UpdateFatturaDto {
-  @IsOptional()
-  @IsEnum(StatoPagamento)
-  statoPagamento?: StatoPagamento;
-
-  @IsOptional()
-  @IsDateString()
-  dataScadenza?: string;
-
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Type(() => Number)
-  importoImponibile?: number;
-
-  @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 2 })
-  @Min(0)
-  @Type(() => Number)
-  iva?: number;
+  @IsOptional() @IsString() numero?: string;
+  @IsOptional() @IsString() fornitoreCliente?: string;
+  @IsOptional() @IsNumber() importoImponibile?: number;
+  @IsOptional() @IsNumber() iva?: number;
+  @IsOptional() @IsDateString() dataEmissione?: string;
+  @IsOptional() @IsDateString() dataScadenza?: string;
+  @IsOptional() @IsEnum(StatoPagamento) statoPagamento?: StatoPagamento;
+  @IsOptional() @IsString() note?: string;
 }
+

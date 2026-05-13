@@ -1,18 +1,18 @@
-import { Fattura } from '@bresciani/db';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    HttpCode,
-    HttpStatus,
-    Param,
-    ParseUUIDPipe,
-    Patch,
-    Post,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Fattura, TipoDocumentoFiscale } from '@strade-servizi/db';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CreateFatturaDto, UpdateFatturaDto } from './fatture.dto';
 import { FattureService } from './fatture.service';
@@ -20,52 +20,36 @@ import { FattureService } from './fatture.service';
 @ApiTags('fatture')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('commesse/:commessaId/fatture')
+@Controller('fatture')
 export class FattureController {
   constructor(private readonly fattureService: FattureService) {}
 
+  @Get('scadenze')
+  async getScadenze(): Promise<Fattura[]> {
+    return this.fattureService.getScadenze();
+  }
+
   @Get()
-  async getByCommessa(
-    @Param('commessaId', new ParseUUIDPipe()) commessaId: string,
+  async findAll(
+    @Query('commessaId') commessaId?: string,
+    @Query('tipo') tipo?: TipoDocumentoFiscale,
   ): Promise<Fattura[]> {
-    return this.fattureService.findByCommessa(commessaId);
-  }
-
-  @Get('summary')
-  async getSummary(
-    @Param('commessaId', new ParseUUIDPipe()) commessaId: string,
-  ): Promise<any> {
-    return this.fattureService.getSummary(commessaId);
-  }
-
-  @Get(':fatturaId')
-  async getOne(
-    @Param('fatturaId', new ParseUUIDPipe()) fatturaId: string,
-  ): Promise<Fattura> {
-    return this.fattureService.findOne(fatturaId);
+    return this.fattureService.findAll({ commessaId, tipo });
   }
 
   @Post()
-  async create(
-    @Param('commessaId', new ParseUUIDPipe()) commessaId: string,
-    @Body() dto: CreateFatturaDto,
-  ): Promise<Fattura> {
-    return this.fattureService.create(commessaId, dto);
+  async create(@Body() dto: CreateFatturaDto): Promise<Fattura> {
+    return this.fattureService.create(dto);
   }
 
-  @Patch(':fatturaId')
-  async update(
-    @Param('fatturaId', new ParseUUIDPipe()) fatturaId: string,
-    @Body() dto: UpdateFatturaDto,
-  ): Promise<Fattura> {
-    return this.fattureService.update(fatturaId, dto);
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateFatturaDto): Promise<Fattura> {
+    return this.fattureService.update(id, dto);
   }
 
-  @Delete(':fatturaId')
+  @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(
-    @Param('fatturaId', new ParseUUIDPipe()) fatturaId: string,
-  ): Promise<void> {
-    return this.fattureService.remove(fatturaId);
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.fattureService.remove(id);
   }
 }

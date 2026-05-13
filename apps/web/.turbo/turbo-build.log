@@ -1,28 +1,26 @@
 
-> web@0.1.0 build C:\Users\Utente\BrescianiCRM\apps\web
+> web@0.1.0 build C:\Gestionale-edile-GP-master\apps\web
 > next build
 
-   ▲ Next.js 15.1.0
+▲ Next.js 16.2.6 (Turbopack)
+- Environments: .env.local
 
-   Creating an optimized production build ...
- ✓ Compiled successfully
-   Linting and checking validity of types ...
-   Collecting page data ...
-   Generating static pages (0/4) ...
-   Generating static pages (1/4) 
-   Generating static pages (2/4) 
-   Generating static pages (3/4) 
- ✓ Generating static pages (4/4)
-   Finalizing page optimization ...
-   Collecting build traces ...
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.4s
+  Running TypeScript ...
+  Finished TypeScript in 4.4s ...
+  Collecting page data using 5 workers ...
+  Generating static pages using 5 workers (0/4) ...
+  Generating static pages using 5 workers (1/4) 
+  Generating static pages using 5 workers (2/4) 
+  Generating static pages using 5 workers (3/4) 
+✓ Generating static pages using 5 workers (4/4) in 649ms
+  Finalizing page optimization ...
 
-Route (app)                              Size     First Load JS
-┌ ○ /                                    15.6 kB         121 kB
-└ ○ /_not-found                          979 B           106 kB
-+ First Load JS shared by all            105 kB
-  ├ chunks/493c3544-a4d224e888eaf62b.js  52.9 kB
-  ├ chunks/51-deb9489b32fbbda6.js        50.5 kB
-  └ other shared chunks (total)          1.95 kB
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+└ ○ /login
 
 
 ○  (Static)  prerendered as static content

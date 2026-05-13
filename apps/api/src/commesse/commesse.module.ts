@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AuditModule } from '../audit.module';
-import { DocumentiModule } from '../documenti/documenti.module';
+import { FattureService } from '../fatture.service';
+import { PrismaModule } from '../prisma/prisma.module';
+import { SalService } from '../sal.service';
 import { CommesseController } from './commesse.controller';
 import { CommesseService } from './commesse.service';
 
 @Module({
-  imports: [DocumentiModule, AuditModule],
+  imports: [PrismaModule],
   controllers: [CommesseController],
-  providers: [CommesseService],
+  providers: [CommesseService, SalService, FattureService],
 })
-export class CommesseModule { }
+export class CommesseModule {}

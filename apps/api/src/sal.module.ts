@@ -7,6 +7,5 @@ import { SalService } from './sal.service';
   imports: [PrismaModule],
   controllers: [SalController],
   providers: [SalService],
-  exports: [SalService],
 })
 export class SalModule {}

@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -13,29 +13,32 @@ datasource db {
 // -----------------------------------------------------------------------------
 
 enum StatoCommessa {
-  IN_PREVENTIVAZIONE
+  PREVENTIVO
+  AGGIUDICATO
   IN_CORSO
   SOSPESO
   CHIUSO
 }
 
-enum StatoAttivita {
-  PROGRAMMATA
-  IN_CORSO
-  COMPLETATA
-  SOSPESA
+enum TipoOpera {
+  MOVIMENTO_TERRA
+  CAPANNONE_LOGISTICO
+  INFRASTRUTTURA_STRADALE
+  OPERE_CIVILI
+  PAVIMENTAZIONE
+  OPERE_VERDE
+  ALTRO
 }
 
 enum StatoSAL {
   BOZZA
-  APPROVATO_DL
+  APPROVATO
   FATTURABILE
 }
 
-enum TipoDocumentoFiscale {
-  FATTURA_ATTIVA
-  FATTURA_PASSIVA
-  NOTA_CREDITO
+enum TipoSAL {
+  ATTIVO
+  PASSIVO
 }
 
 enum StatoPagamento {
@@ -44,48 +47,77 @@ enum StatoPagamento {
   PAGATO
 }
 
-enum TipoEntitaDocumento {
-  COMMESSA
-  SAL
-  FATTURA
-  FORNITORE
+enum TipoDocumentoFiscale {
+  FATTURA_ATTIVA
+  FATTURA_PASSIVA
+  NOTA_CREDITO
 }
 
-enum StatoOCR {
-  NON_RICHIESTO
-  IN_ELABORAZIONE
-  COMPLETATO
-  FALLITO
+enum StatoMezzo {
+  OPERATIVO
+  IN_MANUTENZIONE
+  FERMO
+  DISMESSO
 }
 
-enum EntitaTargetImport {
-  FORNITORI
-  LISTINO_PREZZI
-  COMPUTO_METRICO
+enum TipoMezzo {
+  ESCAVATORE
+  DUMPER
+  BULLDOZER
+  BETONIERA
+  AUTOCARRO
+  AUTOGRÙ
+  COMPATTATORE
+  PALA_MECCANICA
+  FINITRICI
+  RULLO_COMPRESSORE
+  ALTRO
 }
 
-enum StatoJob {
-  IN_CODA
-  IN_ELABORAZIONE
-  COMPLETATO
-  COMPLETATO_CON_ERRORI
-  FALLITO
+enum Qualifica {
+  OPERAIO_COMUNE
+  OPERAIO_SPECIALIZZATO
+  CAPOCANTIERE
+  GRUISTA
+  AUTISTA
+  TECNICO
+  IMPIEGATO
+  GEOMETRA
+  INGEGNERE
+}
+
+enum TipoDocumentoSicurezza {
+  POS
+  DVR
+  DUVRI
+  PIANO_SICUREZZA
+  VERBALE_RIUNIONE
+  ATTESTATO_CORSO
+  ALTRO
 }
 
 enum RuoloUtente {
   ADMIN
-  PM
+  DIRETTORE_LAVORI
+  CAPOCANTIERE
   VIEWER
 }
 
-// TipoFornitore enum rimosso: i fornitori non sono più un'entità DB separata.
+enum TipoEntitaDocumento {
+  COMMESSA
+  PERSONALE
+  MEZZO
+  SUBAPPALTATORE
+  SAL
+  FATTURA
+}
 
 // -----------------------------------------------------------------------------
 // MODELLI DOMINIO
 // -----------------------------------------------------------------------------
 
 model User {
-  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id           String      @id @default(cuid())
   email        String      @unique
   passwordHash String      @map("password_hash")
   ruolo        RuoloUtente @default(VIEWER)
@@ -98,180 +130,373 @@ model User {
 }
 
 model Commessa {
-  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  codiceIdentificativo  String        @unique @map("codice_identificativo")
-  tipoLavori            String        @map("tipo_lavori")
-  nomeCantiere          String        @map("nome_cantiere")
-  nomeCliente           String?       @map("nome_cliente")
-  indirizzo             String?       @map("indirizzo")
-  citta                 String?       @map("citta")
-  cap                   String?       @map("cap")
-  responsabile          String?       @map("responsabile")
-  budgetIniziale        Decimal       @map("budget_iniziale") @db.Decimal(12, 2)
-  dataInizio            DateTime      @map("data_inizio") @db.Date
-  dataFinePrevista      DateTime?     @map("data_fine_prevista") @db.Date
-  dataInizioLavori      DateTime?     @map("data_inizio_lavori") @db.Date
-  stato                 StatoCommessa @default(IN_PREVENTIVAZIONE)
-  createdAt             DateTime      @default(now()) @map("created_at")
-  updatedAt             DateTime      @updatedAt @map("updated_at")
-  attivita              Attivita[]
-  sals                  Sal[]
-  fatture               Fattura[]
-  fornitureMateriali    FornituraMateriale[]
-  fornitureServizi      FornituraServizio[]
-  appaltoVoci           AppaltoVoce[]
+  id                   String        @id @default(cuid())
+  codiceIdentificativo String        @unique @map("codice_identificativo")
+  nomeCantiere         String        @map("nome_cantiere")
+  committente          String?
+  tipoOpera            TipoOpera     @default(ALTRO) @map("tipo_opera")
+  indirizzo            String?
+  citta                String?
+  cap                  String?
+  provincia            String?
+  gpsLat               Float?        @map("gps_lat")
+  gpsLng               Float?        @map("gps_lng")
+  responsabile         String?
+  importoContratto     Float         @default(0) @map("importo_contratto")
+  importoLavoriPropri  Float         @default(0) @map("importo_lavori_propri")
+  stato                StatoCommessa @default(PREVENTIVO)
+  dataInizio           DateTime?     @map("data_inizio")
+  dataFinePrevista     DateTime?     @map("data_fine_prevista")
+  dataFineEffettiva    DateTime?     @map("data_fine_effettiva")
+  note                 String?
+  createdAt            DateTime      @default(now()) @map("created_at")
+  updatedAt            DateTime      @updatedAt @map("updated_at")
+
+  presenze             PresenzaGiornaliera[]
+  assegnazioniMezzi    AssegnazioneMezzo[]
+  materiali            Materiale[]
+  contratti            ContrattoSubappalto[]
+  sal                  Sal[]
+  fatture              Fattura[]
+  documenti            Documento[]
+  scadenzeDocSicurezza DocumentoSicurezza[]
+
   @@index([stato])
   @@index([responsabile])
   @@map("commesse")
 }
 
-model AppaltoVoce {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  commessaId         String   @map("commessa_id") @db.Uuid
-  parentId           String?  @map("parent_id") @db.Uuid
-  descrizione        String   @db.Text
-  unitaMisura        String   @map("unita_misura")
-  quantita           Decimal  @db.Decimal(12, 3)
-  prezzoUnitario     Decimal  @map("prezzo_unitario") @db.Decimal(12, 4)
-  avanzamentoPercent Decimal  @map("avanzamento_percent") @db.Decimal(5, 2)
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
-  parent             AppaltoVoce? @relation("AppaltoVoceTree", fields: [parentId], references: [id], onDelete: Cascade)
-  children           AppaltoVoce[] @relation("AppaltoVoceTree")
-  commessa           Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+// -----------------------------------------------------------------------------
+// PERSONALE
+// -----------------------------------------------------------------------------
+
+model Personale {
+  id             String     @id @default(cuid())
+  matricola      String     @unique
+  nome           String
+  cognome        String
+  qualifica      Qualifica  @default(OPERAIO_COMUNE)
+  costoOrario    Float      @default(0) @map("costo_orario")
+  telefono       String?
+  email          String?
+  codiceFiscale  String?    @unique @map("codice_fiscale")
+  dataAssunzione DateTime?  @map("data_assunzione")
+  attivo         Boolean    @default(true)
+  note           String?
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  presenze             PresenzaGiornaliera[]
+  scadenzeCorsi        ScadenzaCorsoSicurezza[]
+  dpiAssegnati         DpiAssegnato[]
+
+  @@map("personale")
+}
+
+model PresenzaGiornaliera {
+  id          String    @id @default(cuid())
+  personaleId String    @map("personale_id")
+  commessaId  String    @map("commessa_id")
+  data        DateTime
+  oreOrdine   Float     @default(8) @map("ore_ordinarie")
+  oreExtra    Float     @default(0) @map("ore_extra")
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  personale   Personale @relation(fields: [personaleId], references: [id], onDelete: Cascade)
+  commessa    Commessa  @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+
+  @@unique([personaleId, commessaId, data])
   @@index([commessaId])
-  @@index([parentId])
-  @@map("appalto_voci")
+  @@index([data])
+  @@map("presenze_giornaliere")
 }
 
-model Attivita {
-  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  commessaId      String        @map("commessa_id") @db.Uuid
-  parentId        String?       @map("parent_id") @db.Uuid
-  codiceWbs       String?       @map("codice_wbs")
-  titolo          String
-  descrizione     String?       @db.Text
-  importoPrevisto Decimal       @map("importo_previsto") @db.Decimal(12, 2)
-  dataInizio      DateTime?     @map("data_inizio") @db.Date
-  dataFine        DateTime?     @map("data_fine") @db.Date
-  responsabile    String?
-  stato           StatoAttivita @default(PROGRAMMATA)
-  parent          Attivita?     @relation("SubAttivita", fields: [parentId], references: [id], onDelete: Cascade)
-  children        Attivita[]    @relation("SubAttivita")
-  commessa        Commessa      @relation(fields: [commessaId], references: [id], onDelete: Cascade)
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
-  @@map("attivita_commessa")
+// -----------------------------------------------------------------------------
+// SICUREZZA PERSONALE
+// -----------------------------------------------------------------------------
+
+model ScadenzaCorsoSicurezza {
+  id          String    @id @default(cuid())
+  personaleId String    @map("personale_id")
+  tipoCorso   String    @map("tipo_corso")
+  dataCorso   DateTime  @map("data_corso")
+  scadenza    DateTime
+  ente        String?
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  personale   Personale @relation(fields: [personaleId], references: [id], onDelete: Cascade)
+
+  @@index([personaleId])
+  @@index([scadenza])
+  @@map("scadenze_corsi_sicurezza")
 }
 
-model FornituraMateriale {
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  commessaId            String   @map("commessa_id") @db.Uuid
-  fornitoreNome         String   @map("fornitore_nome")
-  importoFornitura      Decimal  @map("importo_fornitura") @db.Decimal(12, 2)
-  descrizione           String?  @db.Text
-  preventivoRiferimento String   @map("preventivo_riferimento")
-  dataPreventivo        DateTime @map("data_preventivo") @db.Date
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-  commessa              Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
-  @@map("forniture_materiali")
+model DpiAssegnato {
+  id          String    @id @default(cuid())
+  personaleId String    @map("personale_id")
+  tipoDpi     String    @map("tipo_dpi")
+  dataConsegna DateTime @map("data_consegna")
+  scadenza    DateTime?
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  personale   Personale @relation(fields: [personaleId], references: [id], onDelete: Cascade)
+
+  @@index([personaleId])
+  @@map("dpi_assegnati")
 }
 
-model FornituraServizio {
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  commessaId            String   @map("commessa_id") @db.Uuid
-  fornitoreNome         String   @map("fornitore_nome")
-  importoFornitura      Decimal  @map("importo_fornitura") @db.Decimal(12, 2)
-  descrizione           String?  @db.Text
-  preventivoRiferimento String   @map("preventivo_riferimento")
-  dataPreventivo        DateTime @map("data_preventivo") @db.Date
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-  commessa              Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
-  @@map("forniture_servizi")
+// -----------------------------------------------------------------------------
+// MEZZI & ATTREZZATURE
+// -----------------------------------------------------------------------------
+
+model Mezzo {
+  id              String     @id @default(cuid())
+  codice          String     @unique
+  descrizione     String
+  tipo            TipoMezzo  @default(ALTRO)
+  targa           String?
+  annoImmatricol  Int?       @map("anno_immatricolazione")
+  costoOrario     Float      @default(0) @map("costo_orario")
+  proprietario    String?
+  stato           StatoMezzo @default(OPERATIVO)
+  note            String?
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  assegnazioni    AssegnazioneMezzo[]
+  scadenze        ScadenzaMezzo[]
+
+  @@map("mezzi")
 }
+
+model AssegnazioneMezzo {
+  id          String    @id @default(cuid())
+  mezzoId     String    @map("mezzo_id")
+  commessaId  String    @map("commessa_id")
+  dataInizio  DateTime  @map("data_inizio")
+  dataFine    DateTime? @map("data_fine")
+  oreImpiegate Float    @default(0) @map("ore_impiegate")
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  mezzo       Mezzo    @relation(fields: [mezzoId], references: [id], onDelete: Cascade)
+  commessa    Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+
+  @@index([mezzoId])
+  @@index([commessaId])
+  @@map("assegnazioni_mezzi")
+}
+
+model ScadenzaMezzo {
+  id          String    @id @default(cuid())
+  mezzoId     String    @map("mezzo_id")
+  tipoScadenza String   @map("tipo_scadenza")
+  scadenza    DateTime
+  completata  Boolean   @default(false)
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  mezzo       Mezzo     @relation(fields: [mezzoId], references: [id], onDelete: Cascade)
+
+  @@index([mezzoId])
+  @@index([scadenza])
+  @@map("scadenze_mezzi")
+}
+
+// -----------------------------------------------------------------------------
+// MATERIALI
+// -----------------------------------------------------------------------------
+
+model Materiale {
+  id              String    @id @default(cuid())
+  commessaId      String    @map("commessa_id")
+  fornitoreNome   String    @map("fornitore_nome")
+  descrizione     String
+  unitaMisura     String    @map("unita_misura")
+  quantita        Float
+  prezzoUnitario  Float     @map("prezzo_unitario")
+  dataConsegna    DateTime? @map("data_consegna")
+  ddt             String?
+  note            String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  commessa        Commessa  @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+
+  @@index([commessaId])
+  @@map("materiali")
+}
+
+// -----------------------------------------------------------------------------
+// SUBAPPALTATORI
+// -----------------------------------------------------------------------------
+
+model Subappaltatore {
+  id              String    @id @default(cuid())
+  ragioneSociale  String    @map("ragione_sociale")
+  piva            String?   @unique
+  codiceFiscale   String?   @unique @map("codice_fiscale")
+  referente       String?
+  telefono        String?
+  email           String?
+  indirizzo       String?
+  citta           String?
+  specializzazione String?
+  attivo          Boolean   @default(true)
+  note            String?
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  contratti       ContrattoSubappalto[]
+
+  @@map("subappaltatori")
+}
+
+model ContrattoSubappalto {
+  id                  String         @id @default(cuid())
+  commessaId          String         @map("commessa_id")
+  subappaltatoreId    String         @map("subappaltatore_id")
+  descrizioneOpera    String         @map("descrizione_opera")
+  importoAffidato     Float          @map("importo_affidato")
+  dataInizio          DateTime?      @map("data_inizio")
+  dataFinePrevista    DateTime?      @map("data_fine_prevista")
+  note                String?
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  commessa            Commessa       @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  subappaltatore      Subappaltatore @relation(fields: [subappaltatoreId], references: [id])
+  sal                 Sal[]
+
+  @@index([commessaId])
+  @@index([subappaltatoreId])
+  @@map("contratti_subappalto")
+}
+
+// -----------------------------------------------------------------------------
+// SAL (Attivi verso committente + Passivi verso subappaltatori)
+// -----------------------------------------------------------------------------
 
 model Sal {
-  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  commessaId               String    @map("commessa_id") @db.Uuid
+  id                       String              @id @default(cuid())
+  commessaId               String              @map("commessa_id")
+  contrattoSubappaltoId    String?             @map("contratto_subappalto_id")
+  tipo                     TipoSAL             @default(ATTIVO)
   progressivo              Int
-  dataCertificazione       DateTime  @map("data_certificazione") @db.Date
-  percentualeCompletamento Decimal   @map("percentuale_completamento") @db.Decimal(5, 2)
-  importoMaturato          Decimal   @map("importo_maturato") @db.Decimal(12, 2)
-  statoApprovazione        StatoSAL  @default(BOZZA) @map("stato_approvazione")
-  createdAt                DateTime  @default(now()) @map("created_at")
-  updatedAt                DateTime  @updatedAt @map("updated_at")
-  commessa                 Commessa  @relation(fields: [commessaId], references: [id], onDelete: Restrict)
+  dataCertificazione       DateTime            @map("data_certificazione")
+  percentualeCompletamento Float               @map("percentuale_completamento")
+  importoMaturato          Float               @map("importo_maturato")
+  importoRitenuta          Float               @default(0) @map("importo_ritenuta")
+  stato                    StatoSAL            @default(BOZZA)
+  note                     String?
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
+
+  commessa                 Commessa            @relation(fields: [commessaId], references: [id], onDelete: Restrict)
+  contrattoSubappalto      ContrattoSubappalto? @relation(fields: [contrattoSubappaltoId], references: [id])
   fatture                  Fattura[]
-  @@unique([commessaId, progressivo])
-  @@map("sals")
+
+  @@unique([commessaId, tipo, progressivo])
+  @@index([commessaId])
+  @@map("sal")
 }
 
+// -----------------------------------------------------------------------------
+// FATTURE
+// -----------------------------------------------------------------------------
+
 model Fattura {
-  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tipoDocumento      TipoDocumentoFiscale @map("tipo_documento")
-  commessaId         String               @map("commessa_id") @db.Uuid
-  salId              String?              @map("sal_id") @db.Uuid
-  importoImponibile  Decimal              @map("importo_imponibile") @db.Decimal(12, 2)
-  iva                Decimal              @db.Decimal(12, 2)
-  dataScadenza       DateTime             @map("data_scadenza") @db.Date
-  statoPagamento     StatoPagamento       @default(DA_PAGARE) @map("stato_pagamento")
-  createdAt          DateTime             @default(now()) @map("created_at")
-  updatedAt          DateTime             @updatedAt @map("updated_at")
-  commessa           Commessa             @relation(fields: [commessaId], references: [id], onDelete: Restrict)
-  sal                Sal?                 @relation(fields: [salId], references: [id], onDelete: Restrict)
+  id                String               @id @default(cuid())
+  tipoDocumento     TipoDocumentoFiscale @map("tipo_documento")
+  commessaId        String               @map("commessa_id")
+  salId             String?              @map("sal_id")
+  numero            String?
+  fornitoreCliente  String?              @map("fornitore_cliente")
+  importoImponibile Float                @map("importo_imponibile")
+  iva               Float                @default(0)
+  dataEmissione     DateTime?            @map("data_emissione")
+  dataScadenza      DateTime?            @map("data_scadenza")
+  statoPagamento    StatoPagamento       @default(DA_PAGARE) @map("stato_pagamento")
+  note              String?
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  commessa          Commessa             @relation(fields: [commessaId], references: [id], onDelete: Restrict)
+  sal               Sal?                 @relation(fields: [salId], references: [id])
+
+  @@index([commessaId])
+  @@index([statoPagamento])
   @@map("fatture")
 }
 
+// -----------------------------------------------------------------------------
+// SICUREZZA CANTIERE
+// -----------------------------------------------------------------------------
+
+model DocumentoSicurezza {
+  id          String                  @id @default(cuid())
+  commessaId  String                  @map("commessa_id")
+  tipo        TipoDocumentoSicurezza  @default(ALTRO)
+  titolo      String
+  dataEmissione DateTime?             @map("data_emissione")
+  scadenza    DateTime?
+  fileUrl     String?                 @map("file_url")
+  note        String?
+  createdAt   DateTime                @default(now()) @map("created_at")
+  updatedAt   DateTime                @updatedAt @map("updated_at")
+
+  commessa    Commessa                @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+
+  @@index([commessaId])
+  @@index([scadenza])
+  @@map("documenti_sicurezza")
+}
+
+// -----------------------------------------------------------------------------
+// DOCUMENTI GENERICI
+// -----------------------------------------------------------------------------
+
 model Documento {
-  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  entitaTipo       TipoEntitaDocumento @map("entita_tipo")
-  entitaId         String              @map("entita_id") @db.Uuid
-  nomeFile         String              @map("nome_file")
-  storageUrl       String              @map("storage_url")
-  hashFile         String              @map("hash_file")
+  id          String              @id @default(cuid())
+  commessaId  String?             @map("commessa_id")
+  entitaTipo  TipoEntitaDocumento @map("entita_tipo")
+  entitaId    String              @map("entita_id")
+  nomeFile    String              @map("nome_file")
+  storageUrl  String              @map("storage_url")
+  hashFile    String              @map("hash_file")
+  categoria   String?
+  mimeType    String?             @map("mime_type")
+  dimensione  Int?
+  createdAt   DateTime            @default(now()) @map("created_at")
 
-  // SOLID: Campo categoria aggiunto per tracciare la sezione (es. "Contratti Cliente")
-  categoria        String?             @map("categoria")
-  sottocategoria   String?             @map("sottocategoria")
+  commessa    Commessa?           @relation(fields: [commessaId], references: [id])
 
-  statoOcr         StatoOCR            @default(NON_RICHIESTO) @map("stato_ocr")
-  datiEstrattiJson Json?               @map("dati_estratti_json")
-  createdAt        DateTime            @default(now()) @map("created_at")
-  jobsImportazione JobImportazione[]
   @@index([entitaTipo, entitaId])
-  @@index([categoria])
-  @@index([createdAt])
+  @@index([commessaId])
   @@map("documenti")
 }
 
+// -----------------------------------------------------------------------------
+// AUDIT LOG
+// -----------------------------------------------------------------------------
+
 model AuditLog {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String?  @map("user_id") @db.Uuid
+  id            String   @id @default(cuid())
+  userId        String?  @map("user_id")
   userEmail     String?  @map("user_email")
   azione        String
   entita        String
   entitaId      String   @map("entita_id")
-  dataPrecedente Json?   @map("data_precedente")
-  dataNuova     Json?    @map("data_nuova")
+  dataPrecedente String? @map("data_precedente")
+  dataNuova     String?  @map("data_nuova")
   createdAt     DateTime @default(now()) @map("created_at")
+
   @@index([entita, entitaId])
   @@index([userId])
   @@index([createdAt])
   @@map("audit_logs")
 }
 
-model JobImportazione {
-  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  documentoId      String             @map("documento_id") @db.Uuid
-  entitaTarget     EntitaTargetImport @map("entita_target")
-  stato            StatoJob           @default(IN_CODA)
-  totaleRecord     Int                @default(0) @map("totale_record")
-  recordProcessati Int                @default(0) @map("record_processati")
-  erroriLog        Json?              @map("errori_log")
-  createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
-  documento        Documento          @relation(fields: [documentoId], references: [id], onDelete: Cascade)
-  @@map("jobs_importazione")
-}

@@ -1,5 +1,5 @@
-import { TipoEntitaDocumento } from '@bresciani/db';
-import { IsEnum, IsIn, IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
+import { TipoEntitaDocumento } from '@strade-servizi/db';
+import { IsEnum, IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 const COMMESSA_CATEGORIE = [
   'Contratti Cliente',
@@ -16,7 +16,7 @@ export class UploadDocumentoDto {
   @IsNotEmpty()
   entitaTipo!: TipoEntitaDocumento;
 
-  @IsUUID()
+  @IsString()
   @IsNotEmpty()
   entitaId!: string;
 

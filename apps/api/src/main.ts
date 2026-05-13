@@ -8,15 +8,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
 
+  // Filtro globale per gestire tutti gli errori in modo uniforme
+  app.useGlobalFilters(new AllExceptionsFilter());
+
   // CORS: accetta solo richieste dal frontend configurato
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   app.enableCors({
     origin: frontendUrl,
     credentials: true,
   });
-
-  // Global exception filter: gestisce tutti gli errori in modo uniforme
-  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Validazione rigorosa: trasformiamo i tipi e puliamo i campi extra
   app.useGlobalPipes(
@@ -40,8 +40,9 @@ async function bootstrap() {
     logger.log('Swagger disponibile su: http://localhost:3001/api/docs');
   }
 
-  // Porta 3001 per evitare conflitti con Next.js
-  await app.listen(3001);
-  logger.log(`Backend attivo su: http://localhost:3001`);
+  const port = Number.parseInt(process.env.API_PORT ?? '3001', 10);
+  await app.listen(port);
+  logger.log(`Backend attivo su: http://localhost:${port}`);
 }
 bootstrap();
+

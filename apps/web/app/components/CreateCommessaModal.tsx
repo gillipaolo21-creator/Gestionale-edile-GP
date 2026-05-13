@@ -23,7 +23,7 @@ interface CreateCommessaModalProps {
   pmMode: 'select' | 'free';
   setPmMode: (mode: 'select' | 'free') => void;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void | Promise<void>;
 }
 
 export function CreateCommessaModal({
@@ -37,7 +37,7 @@ export function CreateCommessaModal({
         <div className="p-8 border-b border-stone-100 flex justify-between items-center bg-[#FBFBFB]">
           <div>
             <h3 className="text-2xl font-black text-[#003A7D] tracking-tighter uppercase">Nuova Commessa</h3>
-            <p className="text-[9px] font-bold text-[#0054B4] uppercase tracking-widest mt-1">Registrazione Protocollo Bresciani Group</p>
+            <p className="text-[9px] font-bold text-[#0054B4] uppercase tracking-widest mt-1">Registrazione Protocollo Strade & Servizi</p>
           </div>
           <button onClick={onClose} className="w-10 h-10 rounded-full hover:bg-stone-200 flex items-center justify-center text-stone-400 transition-colors">
             <X size={20} />

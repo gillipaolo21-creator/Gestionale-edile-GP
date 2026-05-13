@@ -1,5 +1,6 @@
 'use client';
 import React, { useMemo, useState } from 'react';
+import { apiFetch } from './apiFetch';
 import type { VarianteVoce } from '../components/VarianteModal';
 import type { Commessa, Documento, DocumentoMetadata, Fornitore } from '../types/domain';
 
@@ -116,10 +117,8 @@ export function useDocumenti(
   // ─── Fetches ─────────────────────────────────────────────────────────────
   const fetchDocumenti = async (commessaId: string) => {
     try {
-      const res = await fetch(`${baseUrl}/api/documenti/COMMESSA/${commessaId}`);
-      if (!res.ok) throw new Error('Impossibile recuperare i documenti');
-      const data = await res.json();
-      setDocumenti(data as Documento[]);
+      const data = await apiFetch<Documento[]>(`${baseUrl}/api/documenti/COMMESSA/${commessaId}`);
+      setDocumenti(data ?? []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossibile recuperare i documenti');
     }
@@ -129,8 +128,7 @@ export function useDocumenti(
   const handleDeleteVariante = async (documentoId: string) => {
     if (!confirm('Eliminare definitivamente questa variante?')) return;
     try {
-      const res = await fetch(`${baseUrl}/api/documenti/${documentoId}`, { method: 'DELETE' });
-      if (!res.ok && res.status !== 204) throw new Error("Errore durante l'eliminazione");
+      await apiFetch(`${baseUrl}/api/documenti/${documentoId}`, { method: 'DELETE' });
       if (selectedCommessa) await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Errore durante l'eliminazione della variante");
@@ -140,12 +138,10 @@ export function useDocumenti(
   const handleUpdateDocStato = async (docId: string, currentMeta: DocumentoMetadata, nuovoStato: string) => {
     const updatedMeta = JSON.stringify({ ...currentMeta, stato: nuovoStato });
     try {
-      const res = await fetch(`${baseUrl}/api/documenti/${docId}/metadata`, {
+      await apiFetch(`${baseUrl}/api/documenti/${docId}/metadata`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ datiEstrattiJson: updatedMeta }),
       });
-      if (!res.ok) throw new Error('Errore aggiornamento stato');
       if (selectedCommessa) await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Errore aggiornamento stato');
@@ -177,11 +173,7 @@ export function useDocumenti(
         payload.append('categoria', 'Contratti Cliente');
         payload.append('sottocategoria', contrattoClienteForm.nomeCliente);
         payload.append('datiEstrattiJson', metadata);
-        const res = await fetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(Array.isArray(errData.message) ? errData.message.join(' | ') : (errData.message || 'Errore durante il caricamento'));
-        }
+        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
       }
       setShowContrattoClienteModal(false);
       setContrattoClienteForm({ nomeCliente: '', dataContratto: new Date().toISOString().split('T')[0], importoContratto: '', note: '' });
@@ -204,8 +196,8 @@ export function useDocumenti(
     setError(null);
 
     const totaleVariante = varianteForm.voci.reduce((acc, v) => {
-      const qty = parseFloat(v.qty) || 0;
-      const pu = parseFloat(v.prezzoUnit) || 0;
+      const qty = Number.parseFloat(v.qty) || 0;
+      const pu = Number.parseFloat(v.prezzoUnit) || 0;
       return acc + qty * pu;
     }, 0);
 
@@ -221,15 +213,10 @@ export function useDocumenti(
 
     try {
       if (editingVarianteId) {
-        const res = await fetch(`${baseUrl}/api/documenti/${editingVarianteId}/metadata`, {
+        await apiFetch(`${baseUrl}/api/documenti/${editingVarianteId}/metadata`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ datiEstrattiJson: metadata }),
         });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(Array.isArray(errData.message) ? errData.message.join(' | ') : (errData.message || 'Errore durante il salvataggio'));
-        }
       } else {
         for (const file of varianteFiles) {
           const payload = new FormData();
@@ -239,11 +226,7 @@ export function useDocumenti(
           payload.append('categoria', 'Contratti Cliente');
           payload.append('sottocategoria', 'Variante');
           payload.append('datiEstrattiJson', metadata);
-          const res = await fetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
-          if (!res.ok) {
-            const errData = await res.json().catch(() => ({}));
-            throw new Error(Array.isArray(errData.message) ? errData.message.join(' | ') : (errData.message || 'Errore durante il caricamento'));
-          }
+          await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
         }
       }
       setShowVarianteModal(false);
@@ -289,11 +272,7 @@ export function useDocumenti(
         payload.append('categoria', 'Contratti Fornitori');
         payload.append('sottocategoria', contrattoFornitoreForm.ragioneSociale);
         payload.append('datiEstrattiJson', metadata);
-        const res = await fetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(Array.isArray(errData.message) ? errData.message.join(' | ') : (errData.message || 'Errore durante il caricamento'));
-        }
+        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
       }
       setShowContrattoFornitoreModal(false);
       setContrattoFornitoreForm({ ragioneSociale: '', partitaIva: '', attivita: '', tipo: 'Fornitore di Materiale', referente: '', telefono: '', isNuovoFornitore: true });
@@ -329,11 +308,7 @@ export function useDocumenti(
         payload.append('entitaId', selectedCommessa.id);
         payload.append('categoria', 'Documentazione Progettuale');
         payload.append('datiEstrattiJson', metadata);
-        const res = await fetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(Array.isArray(errData.message) ? errData.message.join(' | ') : (errData.message || 'Errore durante il caricamento'));
-        }
+        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
       }
       setShowDocProgettualeModal(false);
       setDocProgettualeForm({ nome: '', descrizione: '', note: '' });
@@ -375,11 +350,7 @@ export function useDocumenti(
         payload.append('categoria', categoriaUpload);
         payload.append('sottocategoria', selectedFornitore.ragioneSociale);
         payload.append('datiEstrattiJson', metadata);
-        const res = await fetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(Array.isArray(errData.message) ? errData.message.join(' | ') : (errData.message || 'Errore durante il caricamento'));
-        }
+        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
       }
       setShowFornitoreDocModal(false);
       setFornitoreDocForm({ tipoDocumento: '', importo: '', tempiPagamento: '', note: '' });
@@ -396,17 +367,13 @@ export function useDocumenti(
   const handleFileUpload = async (file: File, categoria: string) => {
     if (!selectedCommessa) return;
     setIsUploading(true);
-    const payload = new FormData();
-    payload.append('file', file);
-    payload.append('entitaTipo', 'COMMESSA');
-    payload.append('entitaId', selectedCommessa.id);
-    payload.append('categoria', categoria);
     try {
-      const res = await fetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || 'Errore durante il caricamento del file');
-      }
+      const payload = new FormData();
+      payload.append('file', file);
+      payload.append('entitaTipo', 'COMMESSA');
+      payload.append('entitaId', selectedCommessa.id);
+      payload.append('categoria', categoria);
+      await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
       await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Errore durante il caricamento del file');
@@ -472,7 +439,7 @@ export function useDocumenti(
         found.add(doc.datiEstrattiJson.ragioneSociale as string);
       }
     }
-    return Array.from(found).sort();
+    return Array.from(found).sort((a, b) => a.localeCompare(b));
   }, [documenti]);
 
   const fornitoriDaDocumenti = useMemo(() => {
@@ -524,11 +491,7 @@ export function useDocumenti(
         payload.append('categoria', 'Contratti Cliente');
         payload.append('sottocategoria', nomeCliente);
         payload.append('datiEstrattiJson', JSON.stringify({ tipoDocumento: 'Allegato', nomeCliente, ...(descrizione ? { descrizione } : {}) }));
-        const res = await fetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || 'Errore durante il caricamento');
-        }
+        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
       }
       await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
@@ -551,11 +514,7 @@ export function useDocumenti(
         payload.append('categoria', 'Contratti Fornitori');
         payload.append('sottocategoria', ragioneSociale);
         payload.append('datiEstrattiJson', JSON.stringify({ tipoDocumento: 'Allegato', ragioneSociale, ...(descrizione ? { descrizione } : {}) }));
-        const res = await fetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.message || 'Errore durante il caricamento');
-        }
+        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
       }
       await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {

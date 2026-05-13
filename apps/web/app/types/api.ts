@@ -6,8 +6,10 @@
 
 // ─── Enums (mirror del backend) ────────────────────────────────────────────
 
-export type StatoCommessa = 'IN_PREVENTIVAZIONE' | 'IN_CORSO' | 'SOSPESO' | 'CHIUSO';
-export type StatoSAL = 'BOZZA' | 'APPROVATO_DL' | 'FATTURABILE';
+export type StatoCommessa = 'PREVENTIVO' | 'AGGIUDICATO' | 'IN_CORSO' | 'SOSPESO' | 'CHIUSO';
+export type StatoSAL = 'BOZZA' | 'APPROVATO' | 'FATTURABILE';
+export type TipoSAL = 'ATTIVO' | 'PASSIVO';
+export type TipoOpera = 'NUOVA_COSTRUZIONE' | 'RISTRUTTURAZIONE' | 'MANUTENZIONE' | 'RESTAURO' | 'INFRASTRUTTURE' | 'IMPIANTI' | 'ALTRO';
 export type StatoPagamento = 'DA_PAGARE' | 'PARZIALE' | 'PAGATO';
 export type TipoDocumentoFiscale = 'FATTURA_ATTIVA' | 'FATTURA_PASSIVA' | 'NOTA_CREDITO';
 export type TipoEntitaDocumento = 'COMMESSA' | 'SAL' | 'FATTURA' | 'FORNITORE';
@@ -19,10 +21,14 @@ export interface ApiFattura {
   tipoDocumento: TipoDocumentoFiscale;
   commessaId: string;
   salId: string | null;
+  numero: string | null;
+  fornitoreCliente: string | null;
   importoImponibile: string; // Decimal → string
   iva: string;
-  dataScadenza: string; // ISO date
+  dataEmissione: string; // ISO date
+  dataScadenza: string | null; // ISO date
   statoPagamento: StatoPagamento;
+  note: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -30,11 +36,14 @@ export interface ApiFattura {
 export interface ApiSal {
   id: string;
   commessaId: string;
+  tipo: TipoSAL;
   progressivo: number;
   dataCertificazione: string;
   percentualeCompletamento: string; // Decimal → string
   importoMaturato: string;
-  statoApprovazione: StatoSAL;
+  importoRitenuta: string | null;
+  stato: StatoSAL;
+  note: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,24 +68,21 @@ export interface ApiAttivita {
 export interface ApiCommessaList {
   id: string;
   codiceIdentificativo: string;
-  tipoLavori: string;
+  tipoOpera: TipoOpera;
   nomeCantiere: string;
-  nomeCliente: string | null;
+  committente: string | null;
   indirizzo: string | null;
   citta: string | null;
   cap: string | null;
   responsabile: string | null;
-  budgetIniziale: string; // Decimal → string
+  importoContratto: string; // Decimal → string
   dataInizio: string;
   dataFinePrevista: string | null;
-  dataInizioLavori: string | null;
   stato: StatoCommessa;
   createdAt: string;
   updatedAt: string;
   fatture: ApiFattura[];
   sals: ApiSal[];
-  hasContrattoCliente: boolean;
-  importoCalcolato: string;
 }
 
 /** GET /api/commesse/:id — dettaglio (include attivita, appaltoVoci, fatture, sals) */

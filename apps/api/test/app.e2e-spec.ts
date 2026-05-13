@@ -1,6 +1,6 @@
-import { Documento, TipoEntitaDocumento } from '@bresciani/db';
 import { BadRequestException, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { Documento, TipoEntitaDocumento } from '@strade-servizi/db';
 import { Readable } from 'stream';
 import * as request from 'supertest';
 import { DocumentiController } from '../src/documenti/documenti.controller';

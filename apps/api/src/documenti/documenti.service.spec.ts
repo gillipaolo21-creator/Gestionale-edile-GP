@@ -1,5 +1,5 @@
-import { TipoEntitaDocumento } from '@bresciani/db';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { TipoEntitaDocumento } from '@strade-servizi/db';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { DocumentiService } from './documenti.service';

@@ -1,7 +1,8 @@
 'use client';
-import { AlertCircle, Briefcase, ChevronRight, FileText, MapPin, Plus, Search, Trash2, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { AlertCircle, Briefcase, ChevronLeft, ChevronRight, FileText, MapPin, Plus, Search, Trash2, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { Commessa } from '../types/domain';
+import { CommessaCardSkeleton } from './Skeleton';
 
 interface PendingDoc {
   id: string;
@@ -27,6 +28,7 @@ interface Filters {
 }
 
 interface DashboardViewProps {
+  isLoading?: boolean;
   commesse: Commessa[];
   stats: Stats;
   pendingDocs: PendingDoc[];
@@ -80,11 +82,11 @@ function computeStatoDisplay(c: Commessa): StatoDisplay {
   const totFattureAttive = (c.fatture || [])
     .filter(f => f.tipoDocumento === 'FATTURA_ATTIVA')
     .reduce((sum, f) => sum + Number(f.importoImponibile || 0), 0);
-  if (totFattureAttive > 0 && totFattureAttive >= Number(c.importoCalcolato || 0)) return 'Finita';
-  // In corso: data inizio lavori impostata
-  if (c.dataInizioLavori) return 'In corso';
-  // Approvata: ha contratto cliente
-  if (c.hasContrattoCliente) return 'Approvata';
+  if (totFattureAttive > 0 && totFattureAttive >= Number(c.importoContratto || 0)) return 'Finita';
+  // In corso: data inizio impostata
+  if (c.dataInizio) return 'In corso';
+  // Approvata: commessa aggiudicata
+  if (c.stato === 'AGGIUDICATO') return 'Approvata';
   return 'Preventivo';
 }
 
@@ -105,7 +107,7 @@ const STATO_STYLE: Record<StatoDisplay, string> = {
   'Chiusa': 'bg-stone-200 text-stone-600 border-stone-300',
 };
 
-export function DashboardView({ commesse, stats, pendingDocs, onOpenDetail, onPreviewDoc, onCreateCommessa, onDeleteFromHome, onUpdatePendingDocStato, page, totalPages, total, onPageChange, pmFolders, onFilterChange }: Readonly<DashboardViewProps>) {
+export function DashboardView({ isLoading, commesse, stats, pendingDocs, onOpenDetail, onPreviewDoc, onCreateCommessa, onDeleteFromHome, onUpdatePendingDocStato, page, totalPages, total, onPageChange, pmFolders, onFilterChange }: Readonly<DashboardViewProps>) {
   const [searchInput, setSearchInput] = useState('');
   const [filterStato, setFilterStato] = useState('');
   const [filterPm, setFilterPm] = useState('');
@@ -126,6 +128,73 @@ export function DashboardView({ commesse, stats, pendingDocs, onOpenDetail, onPr
 
   // Cleanup debounce on unmount
   useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+
+  let commesseGrid: React.ReactNode;
+  if (isLoading) {
+    commesseGrid = [1, 2, 3, 4, 5].map(i => <CommessaCardSkeleton key={i} />);
+  } else if (commesse.length === 0) {
+    commesseGrid = (
+      <div className="p-20 border border-dashed border-stone-300 rounded-3xl text-center text-stone-300 italic text-sm">
+        Nessuna commessa rilevata.
+      </div>
+    );
+  } else {
+    commesseGrid = commesse.map(c => (
+      <button
+        key={c.id}
+        type="button"
+        onClick={() => onOpenDetail(c.id)}
+        className="bg-white p-6 rounded-2xl border border-stone-400 shadow-xl shadow-stone-400/50 hover:border-[#0054B4]/30 hover:shadow-2xl transition-all duration-500 group cursor-pointer w-full text-left"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-6">
+            <div className="w-10 h-10 bg-[#FBFBFB] rounded-xl flex items-center justify-center text-[#0054B4] group-hover:bg-[#0054B4] group-hover:text-white transition-all duration-500 shadow-sm border border-stone-100">
+              <Briefcase size={20} strokeWidth={2} />
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-lg text-[#003A7D] tracking-tight">
+              <span className="font-bold uppercase group-hover:text-[#0054B4] transition-colors">
+                {c.codiceIdentificativo}
+              </span>
+              <span>&bull;</span>
+              <span className="font-semibold text-stone-600">{c.tipoOpera || 'Tipologia non definita'}</span>
+              <span>&bull;</span>
+              <span className="font-semibold text-stone-600">Cliente: {c.committente || 'Non specificato'}</span>
+              <span>&bull;</span>
+              <span className="font-semibold text-stone-600 flex items-center gap-1">
+                <MapPin size={12} />
+                {formatLocation(c.indirizzo, c.citta)}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-right">
+            <div className="flex flex-col items-end justify-center leading-none whitespace-nowrap">
+              <p className="text-[8px] font-black text-[#0054B4] uppercase tracking-widest opacity-40 whitespace-nowrap">Importo Lavori</p>
+              <p className="text-xl font-semibold text-[#003A7D] leading-none mt-1 flex items-baseline gap-1">
+                <span className="text-sm font-bold">€</span>
+                <span>{Number(c.importoContratto).toLocaleString('it-IT')}</span>
+              </p>
+              <span className={`mt-1.5 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${STATO_STYLE[computeStatoDisplay(c)]}`}>
+                {computeStatoDisplay(c)}
+              </span>
+            </div>
+            <button
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteFromHome(c);
+              }}
+              className="p-2 rounded-lg border border-stone-200 text-stone-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
+              aria-label="Elimina commessa"
+            >
+              <Trash2 size={16} strokeWidth={2} />
+            </button>
+            <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-400 group-hover:text-[#0054B4] group-hover:border-[#0054B4]/40 group-hover:bg-blue-50 transition-all shrink-0">
+              <ChevronRight size={16} strokeWidth={2.5} />
+            </div>
+          </div>
+        </div>
+      </button>
+    ));
+  }
 
   return (
     <>
@@ -196,71 +265,19 @@ export function DashboardView({ commesse, stats, pendingDocs, onOpenDetail, onPr
               <option value="SOSPESO">Sospeso</option>
               <option value="CHIUSO">Chiusa</option>
             </select>
+            {pmFolders.length > 0 && (
+              <select
+                value={filterPm}
+                onChange={e => { setFilterPm(e.target.value); onFilterChange({ search: searchInput || undefined, stato: filterStato || undefined, responsabile: e.target.value || undefined }); }}
+                className="py-2 px-3 text-[11px] rounded-lg border border-stone-200 bg-white focus:outline-none focus:border-[#0054B4]/50 text-stone-600"
+              >
+                <option value="">Tutti i PM</option>
+                {pmFolders.map(pm => <option key={pm} value={pm}>{pm}</option>)}
+              </select>
+            )}
           </div>
           <div className="grid gap-4">
-            {commesse.length === 0 ? (
-              <div className="p-20 border border-dashed border-stone-300 rounded-3xl text-center text-stone-300 italic text-sm">
-                Nessuna commessa rilevata.
-              </div>
-            ) : (
-              commesse.map(c => (
-                <div
-                  key={c.id}
-                  onClick={() => onOpenDetail(c.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenDetail(c.id); }}
-                  role="button"
-                  tabIndex={0}
-                  className="bg-white p-6 rounded-2xl border border-stone-400 shadow-xl shadow-stone-400/50 hover:border-[#0054B4]/30 hover:shadow-2xl transition-all duration-500 group cursor-pointer"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                      <div className="w-10 h-10 bg-[#FBFBFB] rounded-xl flex items-center justify-center text-[#0054B4] group-hover:bg-[#0054B4] group-hover:text-white transition-all duration-500 shadow-sm border border-stone-100">
-                        <Briefcase size={20} strokeWidth={2} />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-lg text-[#003A7D] tracking-tight">
-                        <span className="font-bold uppercase group-hover:text-[#0054B4] transition-colors">
-                          {c.codiceIdentificativo}
-                        </span>
-                        <span>&bull;</span>
-                        <span className="font-semibold text-stone-600">{c.tipoLavori || 'Tipologia non definita'}</span>
-                        <span>&bull;</span>
-                        <span className="font-semibold text-stone-600">Cliente: {c.nomeCliente || 'Non specificato'}</span>
-                        <span>&bull;</span>
-                        <span className="font-semibold text-stone-600 flex items-center gap-1">
-                          <MapPin size={12} />
-                          {formatLocation(c.indirizzo, c.citta)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-right">
-                      <div className="flex flex-col items-end justify-center leading-none whitespace-nowrap">
-                        <p className="text-[8px] font-black text-[#0054B4] uppercase tracking-widest opacity-40 whitespace-nowrap">Importo Lavori</p>
-                        <p className="text-xl font-semibold text-[#003A7D] leading-none mt-1 flex items-baseline gap-1">
-                          <span className="text-sm font-bold">€</span>
-                          <span>{Number(c.importoCalcolato).toLocaleString('it-IT')}</span>
-                        </p>
-                        <span className={`mt-1.5 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${STATO_STYLE[computeStatoDisplay(c)]}`}>
-                          {computeStatoDisplay(c)}
-                        </span>
-                      </div>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onDeleteFromHome(c);
-                        }}
-                        className="p-2 rounded-lg border border-stone-200 text-stone-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-colors"
-                        aria-label="Elimina commessa"
-                      >
-                        <Trash2 size={16} strokeWidth={2} />
-                      </button>
-                      <div className="w-8 h-8 flex items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-400 group-hover:text-[#0054B4] group-hover:border-[#0054B4]/40 group-hover:bg-blue-50 transition-all shrink-0">
-                        <ChevronRight size={16} strokeWidth={2.5} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
+            {commesseGrid}
           </div>
 
           {/* Paginazione */}
@@ -334,11 +351,7 @@ export function DashboardView({ commesse, stats, pendingDocs, onOpenDetail, onPr
                 return (
                   <div
                     key={doc.id}
-                    onClick={() => onPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile }); }}
-                    role="button"
-                    tabIndex={0}
-                    className="flex items-center gap-3 px-4 py-3 hover:bg-amber-50/40 transition-colors cursor-pointer group"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-amber-50/40 transition-colors group"
                   >
                     <div className="w-7 h-7 bg-amber-50 rounded-lg flex items-center justify-center flex-shrink-0">
                       <FileText size={12} className="text-amber-500" />

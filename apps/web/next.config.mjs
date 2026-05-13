@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // SOLID: Permette a Next.js di compilare i pacchetti condivisi del monorepo
-  transpilePackages: ["@bresciani/db"],
+  transpilePackages: ["@strade-servizi/db"],
 
   // Disabilitiamo l'indicatore di overlay che può interferire con il design
   devIndicators: {

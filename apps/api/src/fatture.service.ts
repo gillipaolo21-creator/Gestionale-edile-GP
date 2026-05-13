@@ -1,46 +1,52 @@
-import { Fattura, Prisma, StatoPagamento } from '@bresciani/db';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateFatturaDto, UpdateFatturaDto } from './fatture.dto';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { Fattura, Prisma, StatoPagamento, TipoDocumentoFiscale } from '@strade-servizi/db';
 import { PrismaService } from './prisma/prisma.service';
+import { CreateFatturaDto, UpdateFatturaDto } from './fatture.dto';
 
 @Injectable()
 export class FattureService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByCommessa(commessaId: string): Promise<Fattura[]> {
+  async findAll(filters?: { commessaId?: string; tipo?: TipoDocumentoFiscale }): Promise<Fattura[]> {
     return this.prisma.fattura.findMany({
-      where: { commessaId },
-      include: { sal: true },
-      orderBy: { createdAt: 'desc' },
+      where: {
+        ...(filters?.commessaId && { commessaId: filters.commessaId }),
+        ...(filters?.tipo && { tipoDocumento: filters.tipo }),
+      },
+      include: { commessa: { select: { nomeCantiere: true, codiceIdentificativo: true } } },
+      orderBy: { dataEmissione: 'desc' },
     });
   }
 
   async findOne(id: string): Promise<Fattura> {
-    const fattura = await this.prisma.fattura.findUnique({
-      where: { id },
-      include: { sal: true, commessa: { select: { codiceIdentificativo: true, nomeCantiere: true } } },
-    });
+    const fattura = await this.prisma.fattura.findUnique({ where: { id } });
     if (!fattura) throw new NotFoundException(`Fattura ${id} non trovata`);
     return fattura;
   }
 
-  async create(commessaId: string, dto: CreateFatturaDto): Promise<Fattura> {
-    // Verifica che la commessa esista
-    const commessa = await this.prisma.commessa.findUnique({ where: { id: commessaId } });
-    if (!commessa) throw new NotFoundException(`Commessa ${commessaId} non trovata`);
-
-    return this.prisma.fattura.create({
-      data: {
-        tipoDocumento: dto.tipoDocumento,
-        commessaId,
-        salId: dto.salId ?? null,
-        importoImponibile: new Prisma.Decimal(dto.importoImponibile),
-        iva: new Prisma.Decimal(dto.iva),
-        dataScadenza: new Date(dto.dataScadenza),
-        statoPagamento: dto.statoPagamento ?? StatoPagamento.DA_PAGARE,
-      },
-      include: { sal: true },
-    });
+  async create(dto: CreateFatturaDto): Promise<Fattura> {
+    try {
+      return await this.prisma.fattura.create({
+        data: {
+          tipoDocumento: dto.tipoDocumento,
+          commessaId: dto.commessaId,
+          salId: dto.salId,
+          numero: dto.numero,
+          fornitoreCliente: dto.fornitoreCliente,
+          importoImponibile: dto.importoImponibile,
+          iva: dto.iva ?? 0,
+          dataEmissione: dto.dataEmissione ? new Date(dto.dataEmissione) : new Date(),
+          dataScadenza: dto.dataScadenza ? new Date(dto.dataScadenza) : undefined,
+          statoPagamento: dto.statoPagamento ?? StatoPagamento.DA_PAGARE,
+          note: dto.note,
+        },
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException('Fattura con lo stesso numero già esistente per questa commessa');
+      }
+      throw e;
+    }
   }
 
   async update(id: string, dto: UpdateFatturaDto): Promise<Fattura> {
@@ -48,12 +54,10 @@ export class FattureService {
     return this.prisma.fattura.update({
       where: { id },
       data: {
-        ...(dto.statoPagamento && { statoPagamento: dto.statoPagamento }),
-        ...(dto.dataScadenza && { dataScadenza: new Date(dto.dataScadenza) }),
-        ...(dto.importoImponibile !== undefined && { importoImponibile: new Prisma.Decimal(dto.importoImponibile) }),
-        ...(dto.iva !== undefined && { iva: new Prisma.Decimal(dto.iva) }),
+        ...dto,
+        dataEmissione: dto.dataEmissione ? new Date(dto.dataEmissione) : undefined,
+        dataScadenza: dto.dataScadenza ? new Date(dto.dataScadenza) : undefined,
       },
-      include: { sal: true },
     });
   }
 
@@ -62,31 +66,16 @@ export class FattureService {
     await this.prisma.fattura.delete({ where: { id } });
   }
 
-  /** Sommario finanziario per una commessa */
-  async getSummary(commessaId: string): Promise<{
-    totaleFatturato: number;
-    totalePagato: number;
-    totaleDaPagare: number;
-    countPerStato: Record<StatoPagamento, number>;
-  }> {
-    const fatture = await this.findByCommessa(commessaId);
-    let totaleFatturato = 0;
-    let totalePagato = 0;
-    let totaleDaPagare = 0;
-    const countPerStato: Record<StatoPagamento, number> = {
-      DA_PAGARE: 0,
-      PARZIALE: 0,
-      PAGATO: 0,
-    };
-
-    for (const f of fatture) {
-      const totale = Number(f.importoImponibile) + Number(f.iva);
-      totaleFatturato += totale;
-      countPerStato[f.statoPagamento]++;
-      if (f.statoPagamento === StatoPagamento.PAGATO) totalePagato += totale;
-      else totaleDaPagare += totale;
-    }
-
-    return { totaleFatturato, totalePagato, totaleDaPagare, countPerStato };
+  async getScadenze(): Promise<Fattura[]> {
+    const soglia = new Date();
+    soglia.setDate(soglia.getDate() + 30);
+    return this.prisma.fattura.findMany({
+      where: {
+        statoPagamento: { not: StatoPagamento.PAGATO },
+        dataScadenza: { lte: soglia, gte: new Date() },
+      },
+      include: { commessa: { select: { nomeCantiere: true, codiceIdentificativo: true } } },
+      orderBy: { dataScadenza: 'asc' },
+    });
   }
 }

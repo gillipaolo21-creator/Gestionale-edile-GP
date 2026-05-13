@@ -1,4 +1,4 @@
-# 🗺️ RoadMap_01 — Gestionale Edile GP (Bresciani Group CRM)
+# 🗺️ RoadMap_01 — Gestionale Edile GP (Strade e Servizi)
 
 > Documento di riferimento per lo sviluppo e il completamento del sistema.
 > Aggiornato al: 11/05/2026 — **Sprint 1 completato, Sprint 2 in corso**
@@ -320,23 +320,23 @@ SPRINT 4 (Settimana 7-8) — Polish
 
 ## 📊 Stato Completamento Attuale
 
-| Area                      | Completamento | Note                                         |
-| ------------------------- | ------------- | -------------------------------------------- |
-| Backend - Commesse        | 100%          | Filtri, export Excel, responsabile auto      |
-| Backend - Documenti       | 100%          | Preview txt/img, updateStato, export ZIP     |
-| Backend - Forniture       | 80%           | Upload file mancante                         |
-| Backend - Fatture/SAL     | 90%           | Frontend tab Contabilità mancante            |
-| Backend - Auth            | 100%          | Responsabile collegato al login              |
-| Backend - Jobs            | 100%          | Polling frontend completato                  |
-| Backend - Swagger         | 95%           | DTO @ApiProperty mancanti                    |
-| Frontend - Lista Commesse | 100%          | Search + filtri + paginazione                |
-| Frontend - Documenti      | 95%           | Pending docs interattivi con badge           |
-| Frontend - Fornitori      | 75%           | Upload file non funziona                     |
-| Frontend - Contabilità    | 0%            | Non iniziato                                 |
-| Sicurezza                 | 85%           | Auth JWT, CORS, filter globale               |
-| Test                      | 5%            | 1 solo file di test                          |
-| Containerizzazione        | 95%           | Dockerfile + docker-compose aggiornati       |
-| **TOTALE STIMATO**        | **~93%**      |                                              |
+| Area                      | Completamento | Note                                     |
+| ------------------------- | ------------- | ---------------------------------------- |
+| Backend - Commesse        | 100%          | Filtri, export Excel, responsabile auto  |
+| Backend - Documenti       | 100%          | Preview txt/img, updateStato, export ZIP |
+| Backend - Forniture       | 80%           | Upload file mancante                     |
+| Backend - Fatture/SAL     | 90%           | Frontend tab Contabilità mancante        |
+| Backend - Auth            | 100%          | Responsabile collegato al login          |
+| Backend - Jobs            | 100%          | Polling frontend completato              |
+| Backend - Swagger         | 95%           | DTO @ApiProperty mancanti                |
+| Frontend - Lista Commesse | 100%          | Search + filtri + paginazione            |
+| Frontend - Documenti      | 95%           | Pending docs interattivi con badge       |
+| Frontend - Fornitori      | 75%           | Upload file non funziona                 |
+| Frontend - Contabilità    | 0%            | Non iniziato                             |
+| Sicurezza                 | 85%           | Auth JWT, CORS, filter globale           |
+| Test                      | 5%            | 1 solo file di test                      |
+| Containerizzazione        | 95%           | Dockerfile + docker-compose aggiornati   |
+| **TOTALE STIMATO**        | **~93%**      |                                          |
 
 ---
 

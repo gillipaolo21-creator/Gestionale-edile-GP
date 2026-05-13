@@ -1,18 +1,18 @@
-import { Sal } from '@bresciani/db';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    HttpCode,
-    HttpStatus,
-    Param,
-    ParseUUIDPipe,
-    Patch,
-    Post,
-    UseGuards,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Sal, TipoSAL } from '@strade-servizi/db';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CreateSalDto, UpdateSalDto } from './sal.dto';
 import { SalService } from './sal.service';
@@ -20,45 +20,31 @@ import { SalService } from './sal.service';
 @ApiTags('sal')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
-@Controller('commesse/:commessaId/sal')
+@Controller('sal')
 export class SalController {
   constructor(private readonly salService: SalService) {}
 
   @Get()
-  async getByCommessa(
-    @Param('commessaId', new ParseUUIDPipe()) commessaId: string,
+  async findAll(
+    @Query('commessaId') commessaId?: string,
+    @Query('tipo') tipo?: TipoSAL,
   ): Promise<Sal[]> {
-    return this.salService.findByCommessa(commessaId);
-  }
-
-  @Get(':salId')
-  async getOne(
-    @Param('salId', new ParseUUIDPipe()) salId: string,
-  ): Promise<Sal> {
-    return this.salService.findOne(salId);
+    return this.salService.findAll({ commessaId, tipo });
   }
 
   @Post()
-  async create(
-    @Param('commessaId', new ParseUUIDPipe()) commessaId: string,
-    @Body() dto: CreateSalDto,
-  ): Promise<Sal> {
-    return this.salService.create(commessaId, dto);
+  async create(@Body() dto: CreateSalDto): Promise<Sal> {
+    return this.salService.create(dto);
   }
 
-  @Patch(':salId')
-  async update(
-    @Param('salId', new ParseUUIDPipe()) salId: string,
-    @Body() dto: UpdateSalDto,
-  ): Promise<Sal> {
-    return this.salService.update(salId, dto);
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateSalDto): Promise<Sal> {
+    return this.salService.update(id, dto);
   }
 
-  @Delete(':salId')
+  @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(
-    @Param('salId', new ParseUUIDPipe()) salId: string,
-  ): Promise<void> {
-    return this.salService.remove(salId);
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.salService.remove(id);
   }
 }

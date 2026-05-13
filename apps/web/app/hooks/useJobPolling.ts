@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { apiFetch } from './apiFetch';
 
 export type JobStatus = 'IN_CODA' | 'IN_ELABORAZIONE' | 'COMPLETATO' | 'ERRORE';
 
@@ -15,7 +16,7 @@ export interface JobState {
   updatedAt: string;
 }
 
-const TERMINAL_STATES: JobStatus[] = ['COMPLETATO', 'ERRORE'];
+const TERMINAL_STATES = new Set<JobStatus>(['COMPLETATO', 'ERRORE']);
 const POLL_INTERVAL_MS = 3000;
 
 /**
@@ -38,9 +39,7 @@ export function useJobPolling(baseUrl: string) {
 
   const fetchJobStatus = useCallback(async (jobId: string): Promise<JobState | null> => {
     try {
-      const res = await fetch(`${baseUrl}/api/jobs/${jobId}`);
-      if (!res.ok) return null;
-      return await res.json() as JobState;
+      return await apiFetch<JobState>(`${baseUrl}/api/jobs/${jobId}`);
     } catch {
       return null;
     }
@@ -52,7 +51,7 @@ export function useJobPolling(baseUrl: string) {
 
     setActiveJob(job);
 
-    if (TERMINAL_STATES.includes(job.stato)) {
+    if (TERMINAL_STATES.has(job.stato)) {
       stopPolling();
       // Aggiorna la lista dei job recenti
       setRecentJobs(prev => {
@@ -72,12 +71,9 @@ export function useJobPolling(baseUrl: string) {
 
   const fetchRecentJobs = useCallback(async () => {
     try {
-      const res = await fetch(`${baseUrl}/api/jobs?limit=10`);
-      if (!res.ok) return;
-      const data = await res.json() as JobState[];
-      setRecentJobs(data);
-      // Se c'è un job attivo non terminale, riprendi il polling
-      const runningJob = data.find(j => !TERMINAL_STATES.includes(j.stato));
+      const data = await apiFetch<JobState[]>(`${baseUrl}/api/jobs?limit=10`);
+      setRecentJobs(data ?? []);
+      const runningJob = (data ?? []).find(j => !TERMINAL_STATES.has(j.stato));
       if (runningJob) {
         startPolling(runningJob.id);
       }

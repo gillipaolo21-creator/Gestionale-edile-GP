@@ -1,11 +1,11 @@
 @echo off
-title BrescianiCRM - Setup iniziale (Nativo)
+title Strade & Servizi - Setup iniziale (Nativo)
 chcp 65001 >nul
 
 set PROJECT=C:\Gestionale-edile-GP-master
 
 echo ========================================
-echo  BrescianiCRM - Setup Prima Installazione
+echo  Strade & Servizi - Setup Prima Installazione
 echo  (Modalita' nativa: PostgreSQL + Memurai)
 echo ========================================
 echo.
@@ -47,7 +47,7 @@ if not exist "%PROJECT%\storage\commesse" (
 
 echo.
 echo [3/4] Creo il database su PostgreSQL locale...
-"C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -c "CREATE DATABASE brescianicrm;" 2>nul
+"C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -c "CREATE DATABASE stradeservizi;" 2>nul
 echo (se vedi "already exists" va bene lo stesso)
 
 echo.

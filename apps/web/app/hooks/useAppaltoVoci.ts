@@ -1,5 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
+import { apiFetch } from './apiFetch';
 import type { ApiAppaltoVoce } from '../types/domain';
 
 export type AppaltoRow = {
@@ -36,10 +37,8 @@ export function useAppaltoVoci(
 
   const fetchAppaltoVoci = async (commessaId: string) => {
     try {
-      const res = await fetch(`${baseUrl}/api/commesse/${commessaId}/appalto-voci`);
-      if (!res.ok) throw new Error('Impossibile recuperare le voci in appalto');
-      const data = await res.json();
-      setAppaltoRows((data as AppaltoRowApi[]).map((row) => ({
+      const data = await apiFetch<AppaltoRowApi[]>(`${baseUrl}/api/commesse/${commessaId}/appalto-voci`);
+      setAppaltoRows((data ?? []).map((row) => ({
         id: row.id,
         parentId: row.parentId ?? null,
         descrizione: row.descrizione || '',
@@ -127,10 +126,10 @@ export function useAppaltoVoci(
     const computeTotals = (row: AppaltoRow): { total: number; avzEuro: number } => {
       const children = byParent.get(row.id) ?? [];
       if (children.length === 0) {
-        const quantita = parseFloat(row.quantita.replace(',', '.')) || 0;
-        const prezzo = parseFloat(row.prezzoUnitario.replace(',', '.')) || 0;
+        const quantita = Number.parseFloat(row.quantita.replace(',', '.')) || 0;
+        const prezzo = Number.parseFloat(row.prezzoUnitario.replace(',', '.')) || 0;
         const total = quantita * prezzo;
-        const avzPercent = Math.min(Math.max(parseFloat(row.avanzamentoPercent.replace(',', '.')) || 0, 0), 100);
+        const avzPercent = Math.min(Math.max(Number.parseFloat(row.avanzamentoPercent.replace(',', '.')) || 0, 0), 100);
         const avzEuro = (total * avzPercent) / 100;
         totalsMap.set(row.id, { total, avzEuro, avzPercent, hasChildren: false });
         return { total, avzEuro };
@@ -195,24 +194,16 @@ export function useAppaltoVoci(
           parentId: row.parentId || null,
           descrizione: row.descrizione,
           unitaMisura: row.unitaMisura,
-          quantita: parseFloat(row.quantita.replace(',', '.')) || 0,
-          prezzoUnitario: parseFloat(row.prezzoUnitario.replace(',', '.')) || 0,
-          avanzamentoPercent: Math.min(Math.max(parseFloat(row.avanzamentoPercent.replace(',', '.')) || 0, 0), 100),
+          quantita: Number.parseFloat(row.quantita.replace(',', '.')) || 0,
+          prezzoUnitario: Number.parseFloat(row.prezzoUnitario.replace(',', '.')) || 0,
+          avanzamentoPercent: Math.min(Math.max(Number.parseFloat(row.avanzamentoPercent.replace(',', '.')) || 0, 0), 100),
         }));
 
-      const res = await fetch(`${baseUrl}/api/commesse/${selectedCommessaId}/appalto-voci`, {
+      const saved = await apiFetch<AppaltoRowApi[]>(`${baseUrl}/api/commesse/${selectedCommessaId}/appalto-voci`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || 'Errore durante il salvataggio delle voci');
-      }
-
-      const saved = await res.json();
-      setAppaltoRows((saved as AppaltoRowApi[]).map((row) => ({
+      setAppaltoRows((saved ?? []).map((row) => ({
         id: row.id,
         parentId: row.parentId ?? null,
         descrizione: row.descrizione || '',

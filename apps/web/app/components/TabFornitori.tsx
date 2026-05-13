@@ -44,7 +44,7 @@ export function TabFornitori({
               const docs = docOperativiPerFornitore.get(fornitore.ragioneSociale) ?? [];
               const isExpanded = expandedFornitoriIds.has(fornitore.ragioneSociale);
               const totaleImporto = docs.reduce((sum, d) => {
-                const imp = parseFloat(d.datiEstrattiJson?.importo || '0');
+                const imp = parseFloat(String(d.datiEstrattiJson?.importo || '0'));
                 return sum + (isNaN(imp) ? 0 : imp);
               }, 0);
               const isServizio = fornitore.tipo === 'Fornitore di Servizi/Subappaltatore';

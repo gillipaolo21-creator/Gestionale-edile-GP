@@ -60,7 +60,7 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$web$2f$app$2f$contex
 ;
 ;
 const metadata = {
-    title: "Bresciani CRM | Controllo Cantieri",
+    title: "Strade & Servizi | Controllo Cantieri",
     description: "Gestionale Edile con architettura SOLID e design Lusso Caldo"
 };
 function RootLayout({ children }) {

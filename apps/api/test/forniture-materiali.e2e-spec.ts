@@ -1,6 +1,6 @@
-import { FornituraMateriale, Prisma } from '@bresciani/db';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { FornituraMateriale, Prisma } from '@strade-servizi/db';
 import * as request from 'supertest';
 import { FornitureMaterialiController } from '../src/forniture-materiali/forniture-materiali.controller';
 import { FornitureMaterialiService } from '../src/forniture-materiali/forniture-materiali.service';

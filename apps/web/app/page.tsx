@@ -18,6 +18,7 @@ import { TabFornitori } from './components/TabFornitori';
 import { TabSintesi } from './components/TabSintesi';
 import { VarianteModal } from './components/VarianteModal';
 import { useAuth } from './context/AuthContext';
+import { apiFetch } from './hooks/apiFetch';
 import { useAppaltoVoci } from './hooks/useAppaltoVoci';
 import { useCommesse } from './hooks/useCommesse';
 import { useDocumenti } from './hooks/useDocumenti';
@@ -28,12 +29,12 @@ import type { ActiveTab } from './types/domain';
 export default function App() {
   const { user, token, logout, isLoading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const baseUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.origin : ''), []);
+  const baseUrl = useMemo(() => (typeof globalThis.window !== 'undefined' ? globalThis.location.origin : ''), []);
 
   // Redirect al login se non autenticato
   useEffect(() => {
     if (!authLoading && !token) {
-      window.location.href = '/login';
+      globalThis.location.href = '/login';
     }
   }, [authLoading, token]);
 
@@ -47,17 +48,16 @@ export default function App() {
   const [pendingDocs, setPendingDocs] = useState<any[]>([]);
   const fetchPendingDocs = useCallback(async () => {
     try {
-      const res = await fetch(`${baseUrl}/api/documenti/pending`);
-      if (res.ok) setPendingDocs(await res.json());
+      const data = await apiFetch<any[]>(`${baseUrl}/api/documenti/pending`);
+      setPendingDocs(data ?? []);
     } catch { /* silenzioso */ }
   }, [baseUrl]);
   useEffect(() => { fetchPendingDocs(); }, [fetchPendingDocs]);
 
   const handleUpdatePendingDocStato = useCallback(async (docId: string, stato: string) => {
     try {
-      await fetch(`${baseUrl}/api/documenti/${docId}/stato`, {
+      await apiFetch(`${baseUrl}/api/documenti/${docId}/stato`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ stato }),
       });
       await fetchPendingDocs();
@@ -71,9 +71,7 @@ export default function App() {
     try {
       commesse.setLoading(true);
       commesse.setDeleteInfo(null);
-      const res = await fetch(`${baseUrl}/api/commesse/${id}`);
-      if (!res.ok) throw new Error('Dettaglio non disponibile');
-      const data = await res.json();
+      const data = await apiFetch<any>(`${baseUrl}/api/commesse/${id}`);
       commesse.setSelectedCommessa(data);
       commesse.setView('detail');
       commesse.setActiveTab(tab || 'sintesi');
@@ -108,11 +106,7 @@ export default function App() {
   }
 
   if (commesse.loading && commesse.view === 'dashboard') {
-    return (
-      <div className="min-h-screen bg-[#FBFBFB] flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#0054B4] stroke-[1px]" size={32} />
-      </div>
-    );
+    // loading handled inline via skeleton cards in DashboardView
   }
 
   return (
@@ -121,10 +115,10 @@ export default function App() {
         <button
           onClick={() => { commesse.setView('dashboard'); commesse.setSelectedCommessa(null); }}
           className="flex flex-col items-center gap-1.5 group px-1"
-          title="Bresciani Group - Home"
+          title="Strade & Servizi - Home"
         >
-          <span className="text-white font-black text-base tracking-tight leading-none group-hover:text-blue-200 transition-colors">B</span>
-          <span className="text-white/50 font-black text-[8px] tracking-widest uppercase leading-none group-hover:text-white/80 transition-colors">Group</span>
+          <span className="text-white font-black text-base tracking-tight leading-none group-hover:text-blue-200 transition-colors">S</span>
+          <span className="text-white/50 font-black text-[8px] tracking-widest uppercase leading-none group-hover:text-white/80 transition-colors">S&S</span>
         </button>
 
         <nav className="flex flex-col gap-6 w-full">
@@ -161,19 +155,21 @@ export default function App() {
       </aside>
 
       <main className="flex-1 p-16 max-w-[1200px] mx-auto w-full">
-        <div
-          className="cursor-pointer group w-full flex flex-col items-center text-center mb-12"
+        <button
+          type="button"
+          className="cursor-pointer group w-full flex flex-col items-center text-center mb-12 bg-transparent border-none p-0"
           onClick={() => { commesse.setView('dashboard'); commesse.setSelectedCommessa(null); }}
         >
           <p className="font-bold tracking-[0.4em] text-[9px] uppercase text-[#0054B4] mb-2">Gestionale Operativo</p>
           <h1 className="text-6xl font-extralight tracking-tighter text-[#003A7D] group-hover:text-[#0054B4] transition-colors leading-none">
-            Bresciani <span className="font-medium">Group</span>
+            Strade <span className="font-medium">&amp; Servizi</span>
           </h1>
           <div className="w-full h-[1px] bg-[#003A7D] mt-3"></div>
-        </div>
+        </button>
 
         {commesse.view === 'dashboard' ? (
           <DashboardView
+            isLoading={commesse.loading}
             commesse={commesse.commesse}
             stats={commesse.stats}
             pendingDocs={pendingDocs}
@@ -206,7 +202,7 @@ export default function App() {
                 </h2>
                 <div className="flex flex-wrap items-center gap-3 mt-3 text-[9px] uppercase tracking-widest">
                   <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#0054B4]/10 text-[#0054B4] font-black">
-                    {commesse.selectedCommessa?.tipoLavori || 'Tipologia non definita'}
+                    {commesse.selectedCommessa?.tipoOpera || 'Tipologia non definita'}
                   </span>
                   <span className="text-stone-300">&bull;</span>
                   <span className="text-stone-500 flex items-center gap-2">
@@ -240,7 +236,7 @@ export default function App() {
                 <div className="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center text-stone-500"><User size={14} /></div>
                 <div>
                   <span className="text-[8px] font-black text-stone-400 uppercase block tracking-widest">Committente</span>
-                  <span className="text-xs font-bold text-[#003A7D] uppercase">{commesse.selectedCommessa?.nomeCliente || 'N/D'}</span>
+                  <span className="text-xs font-bold text-[#003A7D] uppercase">{commesse.selectedCommessa?.committente || 'N/D'}</span>
                 </div>
               </div>
               <div className="px-4 py-3 bg-white border border-stone-200 rounded-xl shadow-sm flex items-center gap-3">

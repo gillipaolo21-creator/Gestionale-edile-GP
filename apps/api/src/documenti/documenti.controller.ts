@@ -1,4 +1,4 @@
-import { Documento, TipoEntitaDocumento } from '@bresciani/db';
+import { Documento, TipoEntitaDocumento } from '@strade-servizi/db';
 import {
     BadRequestException,
     Body,
@@ -9,7 +9,6 @@ import {
     HttpStatus,
     Param,
     ParseEnumPipe,
-    ParseUUIDPipe,
     Patch,
     Post,
     Res,
@@ -43,7 +42,7 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/octet-stream', // .dwg e altri file CAD
 ]);
 
-const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB – limite esplicito documentale // NOSONAR:typescript:S5693
 
 /**
  * Controller per la gestione dell'upload documentale.
@@ -58,7 +57,7 @@ export class DocumentiController {
 
   @Get(':documentoId/preview')
   async preview(
-    @Param('documentoId', new ParseUUIDPipe()) documentoId: string,
+    @Param('documentoId') documentoId: string,
     @Res() res: Response,
   ): Promise<void> {
     try {
@@ -72,7 +71,7 @@ export class DocumentiController {
 
   @Get(':documentoId/download')
   async download(
-    @Param('documentoId', new ParseUUIDPipe()) documentoId: string,
+    @Param('documentoId') documentoId: string,
   ): Promise<StreamableFile> {
     const { stream, filename, mimeType } = await this.documentiService.getFileStream(documentoId);
 
@@ -84,7 +83,7 @@ export class DocumentiController {
 
   @Get('commessa/:commessaId/export-zip')
   async exportZip(
-    @Param('commessaId', new ParseUUIDPipe()) commessaId: string,
+    @Param('commessaId') commessaId: string,
     @Res() res: Response,
   ): Promise<void> {
     const { stream, filename } = await this.documentiService.exportCommessaZip(commessaId);
@@ -106,14 +105,14 @@ export class DocumentiController {
   @Get(':entitaTipo/:entitaId')
   async getByEntity(
     @Param('entitaTipo', new ParseEnumPipe(TipoEntitaDocumento)) entitaTipo: TipoEntitaDocumento,
-    @Param('entitaId', new ParseUUIDPipe()) entitaId: string,
+    @Param('entitaId') entitaId: string,
   ): Promise<Documento[]> {
     return this.documentiService.findByEntita(entitaTipo, entitaId);
   }
 
   @Patch(':documentoId/stato')
   async updateStato(
-    @Param('documentoId', new ParseUUIDPipe()) documentoId: string,
+    @Param('documentoId') documentoId: string,
     @Body('stato') stato: string,
   ): Promise<Documento> {
     return this.documentiService.updateStato(documentoId, stato);
@@ -121,7 +120,7 @@ export class DocumentiController {
 
   @Patch(':documentoId/metadata')
   async patchMetadata(
-    @Param('documentoId', new ParseUUIDPipe()) documentoId: string,
+    @Param('documentoId') documentoId: string,
     @Body('datiEstrattiJson') datiEstrattiJson: string,
   ): Promise<Documento> {
     return this.documentiService.patchMetadata(documentoId, datiEstrattiJson);
@@ -130,7 +129,7 @@ export class DocumentiController {
   @Delete(':documentoId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(
-    @Param('documentoId', new ParseUUIDPipe()) documentoId: string,
+    @Param('documentoId') documentoId: string,
   ): Promise<void> {
     return this.documentiService.deleteDocumento(documentoId);
   }
@@ -159,7 +158,7 @@ export class DocumentiController {
 
     // Protezione path traversal: sanitizza sottocategoria e categoria
     const safeSottocategoria = payload.sottocategoria
-      ? payload.sottocategoria.replace(/[/\\..]/g, '_')
+      ? payload.sottocategoria.replace(/[/\\.]/g, '_')
       : undefined;
 
     return this.documentiService.uploadAndSave(

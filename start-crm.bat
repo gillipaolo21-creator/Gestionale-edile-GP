@@ -1,5 +1,5 @@
 @echo off
-title BrescianiCRM - Avvio Sistema
+title Strade & Servizi - Avvio Sistema
 chcp 65001 >nul
 
 set PROJECT=C:\Gestionale-edile-GP-master
@@ -7,7 +7,7 @@ set PROJECT=C:\Gestionale-edile-GP-master
 cd /d %PROJECT%
 
 echo ========================================
-echo  Avvio BrescianiCRM (locale nativo)
+echo  Avvio Strade & Servizi (locale nativo)
 echo ========================================
 
 echo.
@@ -47,11 +47,11 @@ cd /d %PROJECT%
 
 echo.
 echo [3/4] Avvio API NestJS (porta 3001)...
-start /min "BrescianiCRM API" cmd /k "cd /d %PROJECT% && pnpm --filter api start:dev"
+start /min "Strade & Servizi API" cmd /k "cd /d %PROJECT% && pnpm --filter api start:dev"
 
 echo.
 echo [4/4] Avvio Frontend Next.js (porta 3000)...
-start /min "BrescianiCRM Web" cmd /k "cd /d %PROJECT% && pnpm --filter web dev"
+start /min "Strade & Servizi Web" cmd /k "cd /d %PROJECT% && pnpm --filter web dev"
 
 echo.
 echo Attendo avvio server (15 sec)...

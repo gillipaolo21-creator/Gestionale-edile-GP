@@ -1,5 +1,6 @@
 'use client';
 import { Activity, Calendar, CheckCircle2, ChevronRight, Layers, Plus, Target, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import type { Commessa, Fattura } from '../types/domain';
 
 interface AppaltoRow {
@@ -46,22 +47,22 @@ export function TabSintesi({
   onToggleRow,
   onSave,
   onUpdateDataInizioLavori,
-}: TabSintesiProps) {
+}: Readonly<TabSintesiProps>) {
   const [dataInizioLocal, setDataInizioLocal] = useState(
-    selectedCommessa.dataInizioLavori ? selectedCommessa.dataInizioLavori.slice(0, 10) : ''
+    selectedCommessa.dataInizio ? selectedCommessa.dataInizio.slice(0, 10) : ''
   );
-  const isDirty = dataInizioLocal !== (selectedCommessa.dataInizioLavori ? selectedCommessa.dataInizioLavori.slice(0, 10) : '');
+  const isDirty = dataInizioLocal !== (selectedCommessa.dataInizio ? selectedCommessa.dataInizio.slice(0, 10) : '');
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8">
       <div className="grid grid-cols-4 gap-6">
         {[
           { label: 'Costi effettivi', value: `€ ${(selectedCommessa.fatture?.reduce((sum: number, f: Fattura) => sum + Number(f.importoImponibile || 0), 0) || 0).toLocaleString('it-IT')}`, color: 'bg-[#003A7D] text-white', icon: Activity },
-          { label: 'Importo lavori', value: `€ ${Number(selectedCommessa.importoCalcolato).toLocaleString('it-IT')}`, color: 'bg-white text-[#003A7D]', icon: Target },
+          { label: 'Importo lavori', value: `€ ${Number(selectedCommessa.importoContratto).toLocaleString('it-IT')}`, color: 'bg-white text-[#003A7D]', icon: Target },
           { label: 'Attività WBS', value: selectedCommessa.attivita?.length || 0, color: 'bg-white text-[#003A7D]', icon: Layers },
           { label: 'Avanzamento', value: `${selectedCommessa.sals?.[0]?.percentualeCompletamento || 0}%`, color: 'bg-white text-green-600', icon: CheckCircle2 }
-        ].map((box, i) => (
-          <div key={i} className={`p-6 rounded-2xl ${box.color} ${box.color.includes('bg-white') ? 'border border-stone-300 shadow-sm' : 'shadow-lg shadow-blue-900/10'}`}>
+        ].map((box) => (
+          <div key={box.label} className={`p-6 rounded-2xl ${box.color} ${box.color.includes('bg-white') ? 'border border-stone-300 shadow-sm' : 'shadow-lg shadow-blue-900/10'}`}>
             <div className="flex justify-between items-start mb-4 text-[8px] font-black uppercase tracking-widest opacity-60">
               <span>{box.label}</span>
               <box.icon size={14} strokeWidth={2.5} />
@@ -74,8 +75,9 @@ export function TabSintesi({
       {/* Data Inizio Lavori */}
       <div className="bg-white border border-stone-400 rounded-2xl p-5 shadow-xl shadow-stone-400/50 flex items-center gap-4">
         <Calendar size={16} className="text-[#0054B4] shrink-0" />
-        <label className="text-[9px] font-black text-[#003A7D] uppercase tracking-widest whitespace-nowrap">Data Inizio Lavori</label>
+        <label htmlFor="data-inizio-lavori" className="text-[9px] font-black text-[#003A7D] uppercase tracking-widest whitespace-nowrap">Data Inizio Lavori</label>
         <input
+          id="data-inizio-lavori"
           type="date"
           value={dataInizioLocal}
           onChange={(e) => setDataInizioLocal(e.target.value)}
@@ -91,12 +93,12 @@ export function TabSintesi({
             Conferma inizio lavori
           </button>
         )}
-        {selectedCommessa.dataInizioLavori && !isDirty && (
+        {selectedCommessa.dataInizio && !isDirty && (
           <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
             <CheckCircle2 size={12} /> Confermata
           </span>
         )}
-        {selectedCommessa.dataInizioLavori && (
+        {selectedCommessa.dataInizio && (
           <button
             onClick={() => { onUpdateDataInizioLavori(null); setDataInizioLocal(''); }}
             className="text-[9px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest"

@@ -1,37 +1,33 @@
-import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
-import { AuditModule } from './audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CommesseModule } from './commesse/commesse.module';
 import { DocumentiModule } from './documenti/documenti.module';
 import { FattureModule } from './fatture.module';
-import { FornitureMaterialiModule } from './forniture-materiali/forniture-materiali.module';
-import { FornitureServiziModule } from './forniture-servizi/forniture-servizi.module';
-import { JobsModule } from './jobs/jobs.module';
+import { JobsModule } from './jobs.module';
+import { MaterialiModule } from './materiali.module';
+import { MezziModule } from './mezzi.module';
+import { PersonaleModule } from './personale.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SalModule } from './sal.module';
+import { SicurezzaModule } from './sicurezza.module';
+import { SubappaltatoriModule } from './subappaltatori.module';
 
 @Module({
   imports: [
     PrismaModule,
-    // Connessione globale al motore Redis (SOLID: configurazione centralizzata)
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379', 10),
-      },
-    }),
-    CommesseModule,
-    JobsModule,
-    DocumentiModule,
-    FornitureMaterialiModule,
-    FornitureServiziModule,
-    FattureModule,
-    SalModule,
     AuthModule,
-    AuditModule,
+    CommesseModule,
+    DocumentiModule,
+    MaterialiModule,
+    MezziModule,
+    PersonaleModule,
+    SalModule,
+    FattureModule,
+    SicurezzaModule,
+    SubappaltatoriModule,
+    JobsModule,
   ],
   controllers: [],
   providers: [],
 })
-export class AppModule { }
+export class AppModule {}

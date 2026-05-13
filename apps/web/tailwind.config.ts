@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * SOLID Design Tokens - Bresciani Group
+ * SOLID Design Tokens - Strade e Servizi
  * Centralizziamo il Blu Istituzionale (#0054B4) per evitare debito tecnico
  * di colori hardcoded sparsi nei componenti.
  */

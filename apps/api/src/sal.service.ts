@@ -1,5 +1,5 @@
-import { Prisma, Sal, StatoSAL } from '@bresciani/db';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, Sal, StatoSAL, TipoSAL } from '@strade-servizi/db';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { CreateSalDto, UpdateSalDto } from './sal.dto';
 
@@ -7,46 +7,83 @@ import { CreateSalDto, UpdateSalDto } from './sal.dto';
 export class SalService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByCommessa(commessaId: string): Promise<Sal[]> {
+  async findAll(filters?: { commessaId?: string; tipo?: TipoSAL }): Promise<Sal[]> {
     return this.prisma.sal.findMany({
-      where: { commessaId },
-      include: { fatture: true },
-      orderBy: { progressivo: 'desc' },
+      where: {
+        ...(filters?.commessaId && { commessaId: filters.commessaId }),
+        ...(filters?.tipo && { tipo: filters.tipo }),
+      },
+      include: { commessa: { select: { nomeCantiere: true, codiceIdentificativo: true } } },
+      orderBy: [{ commessaId: 'asc' }, { progressivo: 'desc' }],
     });
   }
 
   async findOne(id: string): Promise<Sal> {
-    const sal = await this.prisma.sal.findUnique({
-      where: { id },
-      include: { fatture: true, commessa: { select: { codiceIdentificativo: true, nomeCantiere: true } } },
-    });
+    const sal = await this.prisma.sal.findUnique({ where: { id } });
     if (!sal) throw new NotFoundException(`SAL ${id} non trovato`);
     return sal;
   }
 
-  async create(commessaId: string, dto: CreateSalDto): Promise<Sal> {
-    const commessa = await this.prisma.commessa.findUnique({ where: { id: commessaId } });
-    if (!commessa) throw new NotFoundException(`Commessa ${commessaId} non trovata`);
+  async create(dto: CreateSalDto): Promise<Sal> {
+    const commessaId = dto.commessaId;
+    const tipo = dto.tipo ?? TipoSAL.ATTIVO;
 
-    // Calcola il prossimo numero progressivo
-    const ultimo = await this.prisma.sal.findFirst({
-      where: { commessaId },
-      orderBy: { progressivo: 'desc' },
-      select: { progressivo: true },
-    });
-    const progressivo = (ultimo?.progressivo ?? 0) + 1;
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        // V2: verifica capienza contratto (solo per SAL ATTIVO)
+        if (tipo === TipoSAL.ATTIVO) {
+          const commessa = await tx.commessa.findUnique({
+            where: { id: commessaId },
+            select: { importoContratto: true },
+          });
+          if (!commessa) throw new NotFoundException(`Commessa ${commessaId} non trovata`);
 
-    return this.prisma.sal.create({
-      data: {
-        commessaId,
-        progressivo,
-        dataCertificazione: new Date(dto.dataCertificazione),
-        percentualeCompletamento: new Prisma.Decimal(dto.percentualeCompletamento),
-        importoMaturato: new Prisma.Decimal(dto.importoMaturato),
-        statoApprovazione: dto.statoApprovazione ?? StatoSAL.BOZZA,
-      },
-      include: { fatture: true },
-    });
+          const totaleEsistente = await tx.sal.aggregate({
+            where: { commessaId, tipo: TipoSAL.ATTIVO },
+            _sum: { importoMaturato: true },
+          });
+
+          const maturato = Number(totaleEsistente._sum.importoMaturato ?? 0);
+          const contratto = Number(commessa.importoContratto ?? 0);
+
+          if (contratto > 0 && maturato + dto.importoMaturato > contratto) {
+            throw new BadRequestException(
+              `Importo maturato cumulato (${(maturato + dto.importoMaturato).toFixed(2)} €) supera l'importo contratto (${contratto.toFixed(2)} €)`,
+            );
+          }
+        }
+
+        let progressivo = dto.progressivo;
+        if (progressivo === undefined) {
+          const last = await tx.sal.findFirst({
+            where: { commessaId, tipo },
+            orderBy: { progressivo: 'desc' },
+            select: { progressivo: true },
+          });
+          progressivo = (last?.progressivo ?? 0) + 1;
+        }
+
+        return tx.sal.create({
+          data: {
+            commessaId,
+            contrattoSubappaltoId: dto.contrattoSubappaltoId,
+            tipo,
+            progressivo,
+            dataCertificazione: dto.dataCertificazione ? new Date(dto.dataCertificazione) : new Date(),
+            percentualeCompletamento: dto.percentualeCompletamento ?? 0,
+            importoMaturato: dto.importoMaturato,
+            importoRitenuta: dto.importoRitenuta,
+            stato: dto.stato ?? StatoSAL.BOZZA,
+            note: dto.note,
+          },
+        });
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        throw new ConflictException('SAL con lo stesso progressivo già esistente per questa commessa e tipo');
+      }
+      throw e;
+    }
   }
 
   async update(id: string, dto: UpdateSalDto): Promise<Sal> {
@@ -54,25 +91,16 @@ export class SalService {
     return this.prisma.sal.update({
       where: { id },
       data: {
-        ...(dto.statoApprovazione && { statoApprovazione: dto.statoApprovazione }),
-        ...(dto.dataCertificazione && { dataCertificazione: new Date(dto.dataCertificazione) }),
-        ...(dto.percentualeCompletamento !== undefined && {
-          percentualeCompletamento: new Prisma.Decimal(dto.percentualeCompletamento),
-        }),
-        ...(dto.importoMaturato !== undefined && {
-          importoMaturato: new Prisma.Decimal(dto.importoMaturato),
-        }),
+        ...dto,
+        dataCertificazione: dto.dataCertificazione ? new Date(dto.dataCertificazione) : undefined,
       },
-      include: { fatture: true },
     });
   }
 
   async remove(id: string): Promise<void> {
-    // Prima rimuove le fatture collegate (Restrict constraint)
     const sal = await this.findOne(id);
-    const salWithFatture = sal as any;
-    if (salWithFatture.fatture?.length > 0) {
-      await this.prisma.fattura.deleteMany({ where: { salId: id } });
+    if (sal.stato !== StatoSAL.BOZZA) {
+      throw new BadRequestException('Solo i SAL in stato BOZZA possono essere eliminati');
     }
     await this.prisma.sal.delete({ where: { id } });
   }

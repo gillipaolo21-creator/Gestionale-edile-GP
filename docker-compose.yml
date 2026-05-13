@@ -1,12 +1,12 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: bresciani-db
+    container_name: strade-servizi-db
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: brescianicrm
+      POSTGRES_DB: stradeservizi
     ports:
       - '5432:5432'
     volumes:
@@ -14,7 +14,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: bresciani-redis
+    container_name: strade-servizi-redis
     restart: always
     ports:
       - '6379:6379'
@@ -23,12 +23,12 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: bresciani-api
+    container_name: strade-servizi-api
     restart: always
     ports:
       - '3001:3001'
     environment:
-      DATABASE_URL: postgresql://postgres:password@postgres:5432/brescianicrm
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/stradeservizi
       JWT_SECRET: change-me-in-production
       JWT_EXPIRES_IN: 8h
       REDIS_HOST: redis
@@ -46,7 +46,7 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
-    container_name: bresciani-web
+    container_name: strade-servizi-web
     restart: always
     ports:
       - '3000:3000'

@@ -17,7 +17,7 @@ interface AuthContextValue {
   isLoading: boolean;
 }
 
-const TOKEN_KEY = 'bresciani_token';
+const TOKEN_KEY = 'strade_servizi_token';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 

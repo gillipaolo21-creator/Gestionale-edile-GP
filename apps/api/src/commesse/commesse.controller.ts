@@ -1,8 +1,4 @@
-import { Commessa } from '@bresciani/db';
-import {
-    ApiBearerAuth,
-    ApiTags,
-} from '@nestjs/swagger';
+import { Commessa, StatoCommessa, TipoOpera } from '@strade-servizi/db';
 import {
     Body,
     Controller,
@@ -11,125 +7,127 @@ import {
     HttpCode,
     HttpStatus,
     Param,
-    ParseUUIDPipe,
     Patch,
     Post,
-    Put,
     Query,
-    Request,
-    StreamableFile,
-    UseGuards
+    UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { JwtPayload } from '../auth/jwt.strategy';
+import { CreateCommessaDto, UpdateCommessaDto } from './commesse.dto';
 import { CommesseService } from './commesse.service';
-import { AppaltoVoceDto } from './dto/appalto-voce.dto';
-import { CreateCommessaDto } from './dto/create-commessa.dto';
+import { SalService } from '../sal.service';
+import { FattureService } from '../fatture.service';
+import { CreateSalNestedDto, UpdateSalDto } from '../sal.dto';
+import { CreateFatturaNestedDto, UpdateFatturaDto } from '../fatture.dto';
+
+type PaginationQuery = { page?: string; limit?: string };
 
 @ApiTags('commesse')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('commesse')
 export class CommesseController {
-  constructor(private readonly commesseService: CommesseService) { }
+  constructor(
+    private readonly commesseService: CommesseService,
+    private readonly salService: SalService,
+    private readonly fattureService: FattureService,
+  ) {}
 
-  @Get()
-  async getAll(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('stato') stato?: string,
-    @Query('responsabile') responsabile?: string,
-    @Query('anno') anno?: string,
-    @Query('citta') citta?: string,
-    @Query('search') search?: string,
-  ): Promise<any> {
-    const pageNum = page ? Math.max(1, parseInt(page, 10)) : undefined;
-    const limitNum = limit ? Math.min(100, Math.max(1, parseInt(limit, 10))) : undefined;
-    const filters = { stato, responsabile, anno, citta, search };
-    return this.commesseService.findAll(pageNum, limitNum, filters);
+  @Get('stats')
+  async getStats() {
+    return this.commesseService.getStats();
   }
 
   @Get('next-code')
   async getNextCode(): Promise<{ codiceIdentificativo: string }> {
-    const codiceIdentificativo = await this.commesseService.getNextCode();
-    return { codiceIdentificativo };
+    return this.commesseService.getNextCode();
   }
 
-  @Get('stats')
-  async getStats(): Promise<any> {
-    return this.commesseService.getStats();
-  }
-
-  @Get(':id/appalto-voci')
-  async getAppaltoVoci(@Param('id', new ParseUUIDPipe()) id: string): Promise<any[]> {
-    return this.commesseService.getAppaltoVoci(id);
+  @Get()
+  async findAll(
+    @Query('stato') stato?: StatoCommessa,
+    @Query('tipoOpera') tipoOpera?: TipoOpera,
+    @Query('responsabile') responsabile?: string,
+    @Query('citta') citta?: string,
+    @Query('anno') anno?: string,
+    @Query('search') search?: string,
+    @Query() { page, limit }: PaginationQuery = {},
+  ) {
+    return this.commesseService.findAll(
+      { stato, tipoOpera, responsabile, citta, anno, search },
+      { page: Number(page ?? 1), limit: Number(limit ?? 20) },
+    );
   }
 
   @Get(':id/delete-info')
-  async getDeleteInfo(@Param('id', new ParseUUIDPipe()) id: string): Promise<{ hasDocuments: boolean; hasFilesOnDisk: boolean }> {
+  async getDeleteInfo(@Param('id') id: string) {
     return this.commesseService.getDeleteInfo(id);
   }
 
+  // ─── Nested SAL routes ────────────────────────────────────────────────────
+
+  @Get(':id/sal')
+  async getSal(
+    @Param('id') id: string,
+    @Query('tipo') tipo?: string,
+  ) {
+    return this.salService.findAll({ commessaId: id, tipo: tipo as any });
+  }
+
+  @Post(':id/sal')
+  async createSal(@Param('id') commessaId: string, @Body() dto: CreateSalNestedDto) {
+    return this.salService.create({ ...dto, commessaId });
+  }
+
+  @Patch(':id/sal/:salId')
+  async updateSal(@Param('salId') salId: string, @Body() dto: UpdateSalDto) {
+    return this.salService.update(salId, dto);
+  }
+
+  // ─── Nested Fatture routes ────────────────────────────────────────────────
+
+  @Get(':id/fatture')
+  async getFatture(@Param('id') id: string) {
+    return this.fattureService.findAll({ commessaId: id });
+  }
+
+  @Post(':id/fatture')
+  async createFattura(@Param('id') commessaId: string, @Body() dto: CreateFatturaNestedDto) {
+    return this.fattureService.create({ ...dto, commessaId });
+  }
+
+  @Patch(':id/fatture/:fatturaId')
+  async updateFattura(@Param('fatturaId') fatturaId: string, @Body() dto: UpdateFatturaDto) {
+    return this.fattureService.update(fatturaId, dto);
+  }
+
+  // ─── Single commessa CRUD ─────────────────────────────────────────────────
+
   @Get(':id')
-  async getOne(@Param('id', new ParseUUIDPipe()) id: string): Promise<any> {
+  async findOne(@Param('id') id: string): Promise<any> {
     return this.commesseService.findOne(id);
   }
 
   @Post()
-  async create(
-    @Body() payload: CreateCommessaDto,
-    @Request() req: { user: JwtPayload },
-  ): Promise<Commessa> {
-    if (!payload.responsabile) {
-      payload.responsabile = req.user.email;
-    }
-    return this.commesseService.create(payload);
-  }
-
-  @Put(':id/appalto-voci')
-  async setAppaltoVoci(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() payload: AppaltoVoceDto[],
-  ): Promise<any[]> {
-    return this.commesseService.setAppaltoVoci(id, payload);
-  }
-
-  @Get(':id/export/appalto-voci')
-  async exportAppaltoVoci(
-    @Param('id', new ParseUUIDPipe()) id: string,
-  ): Promise<StreamableFile> {
-    return this.commesseService.exportAppaltoVociExcel(id);
-  }
-
-  /**
-   * SOLID: Endpoint per la chiusura sicura della commessa (Status Change).
-   * Previene la perdita di dati storici e documenti contabili.
-   */
-  @Patch(':id/data-inizio-lavori')
-  async updateDataInizioLavori(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() body: { dataInizioLavori: string | null },
-  ): Promise<Commessa> {
-    return this.commesseService.updateDataInizioLavori(id, body.dataInizioLavori);
+  async create(@Body() dto: CreateCommessaDto): Promise<Commessa> {
+    return this.commesseService.create(dto);
   }
 
   @Patch(':id/chiudi')
-  async close(@Param('id', new ParseUUIDPipe()) id: string): Promise<Commessa> {
-    return this.commesseService.close(id);
+  async chiudi(@Param('id') id: string): Promise<Commessa> {
+    return this.commesseService.chiudi(id);
   }
 
-  /**
-   * Endpoint di eliminazione fisica (Mantenuto solo per emergenze DB / Admin)
-   */
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateCommessaDto): Promise<Commessa> {
+    return this.commesseService.update(id, dto);
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
-    await this.commesseService.remove(id);
-  }
-
-  @Delete(':id/home')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async removeFromHome(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
-    await this.commesseService.removeFromHome(id);
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.commesseService.remove(id);
   }
 }
+

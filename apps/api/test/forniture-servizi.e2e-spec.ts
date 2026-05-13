@@ -1,6 +1,6 @@
-import { FornituraServizio, Prisma } from '@bresciani/db';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { FornituraServizio, Prisma } from '@strade-servizi/db';
 import * as request from 'supertest';
 import { FornitureServiziController } from '../src/forniture-servizi/forniture-servizi.controller';
 import { FornitureServiziService } from '../src/forniture-servizi/forniture-servizi.service';
