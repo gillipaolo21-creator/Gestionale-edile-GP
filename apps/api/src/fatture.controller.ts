@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Fattura, TipoDocumentoFiscale } from '@strade-servizi/db';
+import { Fattura, TipoDocumentoFiscale } from '@prisma/client';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CreateFatturaDto, UpdateFatturaDto } from './fatture.dto';
 import { FattureService } from './fatture.service';

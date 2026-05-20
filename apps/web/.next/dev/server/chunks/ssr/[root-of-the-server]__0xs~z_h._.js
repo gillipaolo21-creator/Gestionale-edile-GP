@@ -70,7 +70,15 @@ function AuthProvider({ children }) {
         });
         if (!res.ok) {
             const err = await res.json().catch(()=>({}));
-            throw new Error(err.message || 'Credenziali non valide');
+            let msg = 'Credenziali non valide';
+            if (err.message) {
+                if (typeof err.message === 'string') msg = err.message;
+                else if (Array.isArray(err.message)) msg = err.message.join(', ');
+                else if (err.message.message) {
+                    msg = Array.isArray(err.message.message) ? err.message.message.join(', ') : err.message.message;
+                }
+            }
+            throw new Error(msg);
         }
         const { accessToken } = await res.json();
         localStorage.setItem(TOKEN_KEY, accessToken);
@@ -84,18 +92,25 @@ function AuthProvider({ children }) {
         setToken(null);
         setUser(null);
     }, []);
-    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(AuthContext.Provider, {
-        value: {
+    const contextValue = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["useMemo"])(()=>({
             user,
             token,
             login,
             logout,
             isLoading
-        },
+        }), [
+        user,
+        token,
+        login,
+        logout,
+        isLoading
+    ]);
+    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$6_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$dist$2f$server$2f$route$2d$modules$2f$app$2d$page$2f$vendored$2f$ssr$2f$react$2d$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["jsxDEV"])(AuthContext.Provider, {
+        value: contextValue,
         children: children
     }, void 0, false, {
         fileName: "[project]/apps/web/app/context/AuthContext.tsx",
-        lineNumber: 84,
+        lineNumber: 97,
         columnNumber: 5
     }, this);
 }

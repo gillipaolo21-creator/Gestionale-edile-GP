@@ -1,4 +1,4 @@
-import { StatoMezzo, TipoMezzo } from '@strade-servizi/db';
+import { StatoMezzo, TipoMezzo } from '@prisma/client';
 import { IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateMezzoDto {

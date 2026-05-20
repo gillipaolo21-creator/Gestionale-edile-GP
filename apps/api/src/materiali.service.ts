@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Materiale } from '@strade-servizi/db';
+import { Materiale } from '@prisma/client';
 import { CreateMaterialeDto, UpdateMaterialeDto } from './materiali.dto';
 import { PrismaService } from './prisma/prisma.service';
 

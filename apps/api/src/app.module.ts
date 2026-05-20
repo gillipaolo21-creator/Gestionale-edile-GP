@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { CommesseModule } from './commesse/commesse.module';
 import { DocumentiModule } from './documenti/documenti.module';
+import { envValidationSchema } from './env.validation';
 import { FattureModule } from './fatture.module';
 import { JobsModule } from './jobs.module';
 import { MaterialiModule } from './materiali.module';
@@ -14,6 +16,13 @@ import { SubappaltatoriModule } from './subappaltatori.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        abortEarly: false,
+      },
+    }),
     PrismaModule,
     AuthModule,
     CommesseModule,

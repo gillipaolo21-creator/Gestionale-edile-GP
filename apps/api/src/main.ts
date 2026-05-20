@@ -1,11 +1,22 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './all-exceptions.filter';
+import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  let app: Awaited<ReturnType<typeof NestFactory.create>>;
+
+  try {
+    app = await NestFactory.create(AppModule, { bufferLogs: true });
+  } catch (err: unknown) {
+    const logger = new Logger('Bootstrap');
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error('Impossibile avviare il server — configurazione non valida:\n' + message);
+    logger.error('Assicurati che il file .env contenga: DATABASE_URL, JWT_SECRET, FRONTEND_URL, STORAGE_BASE_PATH');
+    process.exit(1);
+  }
+
   const logger = new Logger('Bootstrap');
 
   // Filtro globale per gestire tutti gli errori in modo uniforme
@@ -41,8 +52,8 @@ async function bootstrap() {
   }
 
   const port = Number.parseInt(process.env.API_PORT ?? '3001', 10);
-  await app.listen(port);
-  logger.log(`Backend attivo su: http://localhost:${port}`);
+  await app.listen(port, '127.0.0.1');
+  logger.log(`Backend attivo su: http://127.0.0.1:${port}`);
 }
 bootstrap();
 

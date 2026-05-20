@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ViewModel (tipi UI) — derivati dalle API shapes ma adattati per il frontend.
  * Per i tipi esatti delle risposte API, vedi ./api.ts.
  */
@@ -66,7 +66,12 @@ export interface DocumentoMetadata {
 export interface Documento {
   id: string;
   nomeFile: string;
-  categoria: string;
+  categoria: string | null;
+  sottocategoria?: string | null;
+  stato?: string | null;
+  mimeType?: string | null;
+  dimensione?: number | null;
+  createdAt?: string;
   datiEstrattiJson?: DocumentoMetadata | null;
 }
 

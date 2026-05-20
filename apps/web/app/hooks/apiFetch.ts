@@ -1,4 +1,4 @@
-const TOKEN_KEY = 'strade_servizi_token';
+﻿const TOKEN_KEY = 'strade_servizi_token';
 
 function getToken(): string | null {
   if (typeof globalThis.window === 'undefined') return null;

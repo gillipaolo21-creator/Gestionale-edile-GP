@@ -1,5 +1,5 @@
-'use client';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+﻿'use client';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 interface AuthUser {
   id: string;
@@ -21,7 +21,7 @@ const TOKEN_KEY = 'strade_servizi_token';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { readonly children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,7 +65,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Credenziali non valide');
+      let msg = 'Credenziali non valide';
+      if (err.message) {
+        if (typeof err.message === 'string') msg = err.message;
+        else if (Array.isArray(err.message)) msg = err.message.join(', ');
+        else if (err.message.message) {
+          msg = Array.isArray(err.message.message) ? err.message.message.join(', ') : err.message.message;
+        }
+      }
+      throw new Error(msg);
     }
 
     const { accessToken } = await res.json();
@@ -80,8 +88,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({ user, token, login, logout, isLoading }),
+    [user, token, login, logout, isLoading],
+  );
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

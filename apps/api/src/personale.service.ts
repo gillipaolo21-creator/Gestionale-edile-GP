@@ -5,7 +5,7 @@ import {
     PresenzaGiornaliera,
     Qualifica,
     ScadenzaCorsoSicurezza,
-} from '@strade-servizi/db';
+} from '@prisma/client';
 import {
     CreateCorsoSicurezzaDto,
     CreateDpiDto,

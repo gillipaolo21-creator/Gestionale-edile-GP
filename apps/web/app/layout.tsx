@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import "./globals.css";
@@ -35,10 +35,10 @@ export default function RootLayout({
             },
             success: {
               style: {
-                background: '#003A7D',
+                background: '#4B6E48',
                 color: '#fff',
               },
-              iconTheme: { primary: '#DFFF00', secondary: '#003A7D' },
+              iconTheme: { primary: '#B2AC88', secondary: '#4B6E48' },
             },
             error: {
               style: {

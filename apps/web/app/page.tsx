@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { AlertCircle, AlertTriangle, Archive, ArrowLeft, Briefcase, Loader2, LogOut, MapPin, Trash2, User, UserCheck, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Archive, ArrowLeft, Briefcase, Loader2, LogOut, MapPin, Menu, Trash2, User, UserCheck, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmModals } from './components/ConfirmModals';
 import { ContrattoClienteModal } from './components/ContrattoClienteModal';
@@ -29,6 +29,7 @@ import type { ActiveTab } from './types/domain';
 export default function App() {
   const { user, token, logout, isLoading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const baseUrl = useMemo(() => (typeof globalThis.window !== 'undefined' ? globalThis.location.origin : ''), []);
 
   // Redirect al login se non autenticato
@@ -99,8 +100,8 @@ export default function App() {
 
   if (authLoading || !token) {
     return (
-      <div className="min-h-screen bg-[#FBFBFB] flex items-center justify-center">
-        <Loader2 className="animate-spin text-[#0054B4] stroke-[1px]" size={32} />
+      <div className="min-h-screen bg-[#F2F0EF] flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#4B6E48] stroke-[1px]" size={32} />
       </div>
     );
   }
@@ -110,8 +111,26 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex font-sans selection:bg-[#0054B4]/5 bg-texture">
-      <aside className="w-20 bg-[#003A7D] flex flex-col items-center py-8 gap-8 sticky top-0 h-screen z-50 shadow-md">
+    <div className="min-h-screen flex font-sans selection:bg-[#4B6E48]/5 bg-[#F2F0EF]">
+      {/* Hamburger button — solo mobile */}
+      <button
+        type="button"
+        className="md:hidden fixed top-4 left-4 z-[60] p-2 rounded-lg bg-[#4B6E48] text-white shadow-md"
+        onClick={() => setSidebarOpen(prev => !prev)}
+        aria-label="Apri menu"
+      >
+        <Menu size={20} />
+      </button>
+
+      {/* Overlay mobile */}
+      {sidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/40 z-[55]"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside className={`w-20 bg-[#4B6E48] flex flex-col items-center py-8 gap-8 fixed md:sticky top-0 h-screen z-[56] shadow-md transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <button
           onClick={() => { commesse.setView('dashboard'); commesse.setSelectedCommessa(null); }}
           className="flex flex-col items-center gap-1.5 group px-1"
@@ -123,14 +142,14 @@ export default function App() {
 
         <nav className="flex flex-col gap-6 w-full">
           <div className="relative flex items-center justify-center group">
-            {commesse.view === 'dashboard' && <div className="absolute left-0 w-1 h-6 bg-white rounded-r-full" />}
+            {commesse.view === 'dashboard' && <div className="absolute left-0 w-1 h-6 bg-gray-100 rounded-r-full" />}
             <button
               onClick={() => commesse.setView('dashboard')}
-              className={`relative p-4 rounded-xl transition-all ${commesse.view === 'dashboard' ? 'text-white bg-white/10 shadow-inner' : 'text-white/30 hover:text-white/70 hover:bg-white/5'}`}
+              className={`relative p-4 rounded-xl transition-all ${commesse.view === 'dashboard' ? 'text-white bg-gray-100/10 shadow-inner' : 'text-white/30 hover:text-white/70 hover:bg-gray-100/5'}`}
             >
               <Briefcase size={22} strokeWidth={2.5} />
               {pendingDocs.length > 0 && (
-                <span className="absolute top-2 right-2 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-amber-400 text-[7px] font-black text-[#003A7D] px-0.5">
+                <span className="absolute top-2 right-2 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-[#B2AC88] text-[7px] font-black text-[#4B6E48] px-0.5">
                   {pendingDocs.length}
                 </span>
               )}
@@ -147,24 +166,24 @@ export default function App() {
           <button
             onClick={logout}
             title="Esci"
-            className="p-3 rounded-xl text-white/30 hover:text-white/80 hover:bg-white/10 transition-all"
+            className="p-3 rounded-xl text-white/30 hover:text-white/80 hover:bg-gray-100/10 transition-all"
           >
             <LogOut size={18} strokeWidth={2} />
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 p-16 max-w-[1200px] mx-auto w-full">
+      <main className="flex-1 p-4 md:p-16 max-w-[1200px] mx-auto w-full md:ml-0 ml-0">
         <button
           type="button"
           className="cursor-pointer group w-full flex flex-col items-center text-center mb-12 bg-transparent border-none p-0"
           onClick={() => { commesse.setView('dashboard'); commesse.setSelectedCommessa(null); }}
         >
-          <p className="font-bold tracking-[0.4em] text-[9px] uppercase text-[#0054B4] mb-2">Gestionale Operativo</p>
-          <h1 className="text-6xl font-extralight tracking-tighter text-[#003A7D] group-hover:text-[#0054B4] transition-colors leading-none">
+          <p className="font-bold tracking-[0.4em] text-[9px] uppercase text-[#4B6E48] mb-2">Gestionale Operativo</p>
+          <h1 className="text-6xl font-extralight tracking-tighter text-[#4B6E48] group-hover:text-[#4B6E48] transition-colors leading-none">
             Strade <span className="font-medium">&amp; Servizi</span>
           </h1>
-          <div className="w-full h-[1px] bg-[#003A7D] mt-3"></div>
+          <div className="w-full h-[1px] bg-[#4B6E48] mt-3"></div>
         </button>
 
         {commesse.view === 'dashboard' ? (
@@ -189,23 +208,23 @@ export default function App() {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <button
               onClick={() => { commesse.setView('dashboard'); commesse.setSelectedCommessa(null); }}
-              className="group flex items-center gap-2 text-[#0054B4] font-bold uppercase text-[8px] tracking-[0.4em] mb-12 hover:translate-x-[-2px] transition-all"
+              className="group flex items-center gap-2 text-[#4B6E48] font-bold uppercase text-[8px] tracking-[0.4em] mb-12 hover:translate-x-[-2px] transition-all"
             >
               <ArrowLeft size={12} strokeWidth={2.5} /> Torna alla Dashboard
             </button>
 
-            <header className="mb-8 flex justify-between items-end">
+            <header className="mb-8 flex flex-col gap-4 md:flex-row md:justify-between md:items-end">
               <div>
-                <p className="text-[#0054B4] font-bold text-[9px] tracking-[0.4em] uppercase mb-4">Scheda Tecnica Operativa</p>
-                <h2 className="text-4xl font-black text-[#003A7D] tracking-tighter leading-none uppercase">
+                <p className="text-[#4B6E48] font-bold text-[9px] tracking-[0.4em] uppercase mb-4">Scheda Tecnica Operativa</p>
+                <h2 className="text-4xl font-black text-[#4B6E48] tracking-tighter leading-none uppercase">
                   {commesse.selectedCommessa?.codiceIdentificativo}
                 </h2>
                 <div className="flex flex-wrap items-center gap-3 mt-3 text-[9px] uppercase tracking-widest">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#0054B4]/10 text-[#0054B4] font-black">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#4B6E48]/10 text-[#4B6E48] font-black">
                     {commesse.selectedCommessa?.tipoOpera || 'Tipologia non definita'}
                   </span>
-                  <span className="text-stone-300">&bull;</span>
-                  <span className="text-stone-500 flex items-center gap-2">
+                  <span className="text-gray-800">&bull;</span>
+                  <span className="text-gray-600 flex items-center gap-2">
                     <MapPin size={14} />
                     {commesse.selectedCommessa?.citta
                       ? `${commesse.selectedCommessa.indirizzo}, ${commesse.selectedCommessa.cap} ${commesse.selectedCommessa.citta}`
@@ -213,17 +232,17 @@ export default function App() {
                   </span>
                 </div>
               </div>
-              <div className="text-right flex flex-col items-end gap-4">
+              <div className="flex flex-row flex-wrap gap-2 md:flex-col md:items-end md:gap-4">
                 <button
                   onClick={() => commesse.setShowCloseModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-stone-200 text-[#003A7D] hover:bg-stone-50 hover:border-[#0054B4] rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-300 text-[#4B6E48] hover:bg-gray-50 hover:border-[#4B6E48] rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
                 >
                   <Archive size={12} strokeWidth={2.5} />
                   Chiudi Cantiere
                 </button>
                 <button
                   onClick={() => commesse.setShowDeleteModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all"
                 >
                   <Trash2 size={12} strokeWidth={2.5} />
                   Elimina Commessa
@@ -231,33 +250,33 @@ export default function App() {
               </div>
             </header>
 
-            <div className="flex items-center gap-4 mb-10 pb-10 border-b border-stone-200">
-              <div className="px-4 py-3 bg-white border border-stone-200 rounded-xl shadow-sm flex items-center gap-3">
-                <div className="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center text-stone-500"><User size={14} /></div>
+            <div className="flex flex-wrap items-center gap-4 mb-10 pb-10 border-b border-gray-300">
+              <div className="px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl shadow-sm flex items-center gap-3">
+                <div className="w-8 h-8 bg-slate-600/50 rounded-lg flex items-center justify-center text-gray-600"><User size={14} /></div>
                 <div>
-                  <span className="text-[8px] font-black text-stone-400 uppercase block tracking-widest">Committente</span>
-                  <span className="text-xs font-bold text-[#003A7D] uppercase">{commesse.selectedCommessa?.committente || 'N/D'}</span>
+                  <span className="text-[8px] font-black text-gray-600 uppercase block tracking-widest">Committente</span>
+                  <span className="text-xs font-bold text-[#4B6E48] uppercase">{commesse.selectedCommessa?.committente || 'N/D'}</span>
                 </div>
               </div>
-              <div className="px-4 py-3 bg-white border border-stone-200 rounded-xl shadow-sm flex items-center gap-3">
-                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-[#0054B4]"><UserCheck size={14} /></div>
+              <div className="px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl shadow-sm flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-[#4B6E48]"><UserCheck size={14} /></div>
                 <div>
-                  <span className="text-[8px] font-black text-[#0054B4]/70 uppercase block tracking-widest">Project Manager</span>
-                  <span className="text-xs font-bold text-[#0054B4] uppercase">{commesse.selectedCommessa?.responsabile || 'N/D'}</span>
+                  <span className="text-[8px] font-black text-[#4B6E48]/70 uppercase block tracking-widest">Project Manager</span>
+                  <span className="text-xs font-bold text-[#4B6E48] uppercase">{commesse.selectedCommessa?.responsabile || 'N/D'}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-8 border-b border-stone-200 mb-8">
+            <div className="flex gap-4 md:gap-8 border-b border-gray-300 mb-8 overflow-x-auto pb-px">
               {detailTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => commesse.setActiveTab(tab.id)}
-                  className={`pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${commesse.activeTab === tab.id ? 'text-[#0054B4]' : 'text-[#003A7D]/50 hover:text-[#003A7D]/80'}`}
+                  className={`pb-4 text-xs font-black uppercase tracking-widest transition-all relative ${commesse.activeTab === tab.id ? 'text-[#4B6E48]' : 'text-[#4B6E48]/50 hover:text-[#4B6E48]/80'}`}
                 >
                   {tab.label}
                   {commesse.activeTab === tab.id && (
-                    <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#0054B4] rounded-t-full"></span>
+                    <span className="absolute bottom-0 left-0 w-full h-[2px] bg-[#4B6E48] rounded-t-full"></span>
                   )}
                 </button>
               ))}
@@ -292,6 +311,7 @@ export default function App() {
                 onEditVariante={(id, vm, baseContratti) => documenti.openVarianteForEdit(id, vm, baseContratti)}
                 onAllegatiClienteUpload={documenti.handleAllegatiClienteUpload}
                 onAllegatiFornitoreUpload={documenti.handleAllegatiFornitoreUpload}
+                onReplaceVarianteFile={documenti.handleReplaceVarianteFile}
               />
             )}
 
@@ -442,27 +462,27 @@ export default function App() {
 
       {documenti.isUploading && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[110] flex items-center justify-center">
-          <div className="bg-white rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
-            <Loader2 className="animate-spin text-[#0054B4]" size={20} />
-            <span className="text-sm font-bold text-[#003A7D]">Caricamento in corso...</span>
+          <div className="bg-gray-100 rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
+            <Loader2 className="animate-spin text-[#4B6E48]" size={20} />
+            <span className="text-sm font-bold text-[#4B6E48]">Caricamento in corso...</span>
           </div>
         </div>
       )}
 
       {commesse.isClosing && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[110] flex items-center justify-center">
-          <div className="bg-white rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
-            <Archive className="text-[#0054B4]" size={20} />
-            <span className="text-sm font-bold text-[#003A7D]">Chiusura cantiere in corso...</span>
+          <div className="bg-gray-100 rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
+            <Archive className="text-[#4B6E48]" size={20} />
+            <span className="text-sm font-bold text-[#4B6E48]">Chiusura cantiere in corso...</span>
           </div>
         </div>
       )}
 
       {commesse.isDeleting && (
         <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[110] flex items-center justify-center">
-          <div className="bg-white rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
+          <div className="bg-gray-100 rounded-2xl px-6 py-4 shadow-xl flex items-center gap-3">
             <AlertTriangle className="text-red-500" size={20} />
-            <span className="text-sm font-bold text-[#003A7D]">Eliminazione in corso...</span>
+            <span className="text-sm font-bold text-[#4B6E48]">Eliminazione in corso...</span>
           </div>
         </div>
       )}

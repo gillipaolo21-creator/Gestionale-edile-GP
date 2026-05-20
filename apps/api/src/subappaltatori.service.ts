@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ContrattoSubappalto, Subappaltatore } from '@strade-servizi/db';
+import { ContrattoSubappalto, Subappaltatore } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import {
     CreateContrattoSubappaltoDto,

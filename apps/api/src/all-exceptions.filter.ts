@@ -26,9 +26,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ? exception.getStatus()
       : HttpStatus.INTERNAL_SERVER_ERROR;
 
-    const message = isHttpException
-      ? exception.getResponse()
-      : 'Errore interno del server';
+    const exceptionResponse = isHttpException ? exception.getResponse() : null;
+    const message = exceptionResponse instanceof Object && 'message' in exceptionResponse
+      ? (exceptionResponse as any).message
+      : exceptionResponse || 'Errore interno del server';
 
     // Log completo lato server (stack trace incluso in sviluppo)
     if (status >= 500) {

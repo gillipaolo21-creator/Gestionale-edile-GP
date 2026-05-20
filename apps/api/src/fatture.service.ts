@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Fattura, Prisma, StatoPagamento, TipoDocumentoFiscale } from '@strade-servizi/db';
+import { Fattura, Prisma, StatoPagamento, TipoDocumentoFiscale } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import { CreateFatturaDto, UpdateFatturaDto } from './fatture.dto';
 

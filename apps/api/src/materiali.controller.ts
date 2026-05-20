@@ -12,7 +12,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Materiale } from '@strade-servizi/db';
+import { Materiale } from '@prisma/client';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CreateMaterialeDto, UpdateMaterialeDto } from './materiali.dto';
 import { MaterialiService } from './materiali.service';

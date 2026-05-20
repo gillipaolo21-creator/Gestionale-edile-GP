@@ -1,4 +1,4 @@
-import { Commessa, StatoCommessa, TipoOpera } from '@strade-servizi/db';
+import { Commessa, StatoCommessa, TipoOpera } from '@prisma/client';
 import {
     Body,
     Controller,

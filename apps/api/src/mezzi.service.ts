@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AssegnazioneMezzo, Mezzo, ScadenzaMezzo, StatoMezzo, TipoMezzo } from '@strade-servizi/db';
+import { AssegnazioneMezzo, Mezzo, ScadenzaMezzo, StatoMezzo, TipoMezzo } from '@prisma/client';
 import {
     CreateAssegnazioneMezzoDto,
     CreateMezzoDto,

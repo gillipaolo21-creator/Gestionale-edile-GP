@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import { apiFetch } from './apiFetch';
 import type { ActiveTab, Commessa, Fattura } from '../types/domain';

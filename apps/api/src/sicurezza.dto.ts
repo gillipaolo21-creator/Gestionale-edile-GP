@@ -1,4 +1,4 @@
-import { TipoDocumentoSicurezza } from '@strade-servizi/db';
+import { TipoDocumentoSicurezza } from '@prisma/client';
 import { IsDateString, IsEnum, IsOptional, IsString } from 'class-validator';
 
 export class CreateDocumentoSicurezzaDto {

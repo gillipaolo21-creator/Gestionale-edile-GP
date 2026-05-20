@@ -1,10 +1,10 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { TipoEntitaDocumento } from '@strade-servizi/db';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import { TipoEntitaDocumento } from '@prisma/client';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { DocumentiService } from './documenti.service';
 
-jest.mock('fs/promises', () => ({
+jest.mock('node:fs/promises', () => ({
   mkdir: jest.fn(),
   writeFile: jest.fn(),
   readdir: jest.fn(),
@@ -22,7 +22,7 @@ describe('DocumentiService', () => {
     jest.clearAllMocks();
     jest.spyOn(Date, 'now').mockReturnValue(1712664000000);
 
-    process.env.STORAGE_BASE_PATH = 'C:\\Storage\\Commesse';
+    process.env.STORAGE_BASE_PATH = String.raw`C:\Storage\Commesse`;
 
     prisma = {
       commessa: {
@@ -106,9 +106,9 @@ describe('DocumentiService', () => {
     );
 
     const expectedFolder = path.join(
-      'C:\\Storage\\Commesse',
-      'DONATO CARLUCCI',
-      '2026_001_Via Roma 1_Milano',
+      String.raw`C:\Storage\Commesse`,
+      'COMMESSA',
+      'commessa-1',
       'Contratti Cliente',
     );
 
@@ -141,10 +141,16 @@ describe('DocumentiService', () => {
       file,
       TipoEntitaDocumento.SAL,
       'sal-1',
-      'Contratti Cliente',
     );
 
-    expect(mkdirMock).not.toHaveBeenCalled();
+    const expectedFolder = path.join(
+      String.raw`C:\Storage\Commesse`,
+      'SAL',
+      'sal-1',
+      '_',
+    );
+
+    expect(mkdirMock).toHaveBeenCalledWith(expectedFolder, { recursive: true });
     expect(writeFileMock).toHaveBeenCalledTimes(1);
     expect(prisma.documento.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -153,7 +159,7 @@ describe('DocumentiService', () => {
         categoria: null,
       }),
     });
-    expect(result.storageUrl).toContain('C:/Storage/Commesse');
+    expect(result.storageUrl).toContain(String.raw`C:\Storage\Commesse`);
   });
 
   it('findByEntita restituisce i documenti ordinati per data decrescente', async () => {

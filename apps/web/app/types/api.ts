@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Tipi che rispecchiano fedelmente le risposte JSON dell'API NestJS.
  * Prisma serializza Decimal come string e Date come ISO string.
  * NON modificare questi tipi per esigenze UI — usare i ViewModel in domain.ts.
@@ -117,8 +117,10 @@ export interface ApiDocumento {
   hashFile: string;
   categoria: string | null;
   sottocategoria: string | null;
-  statoOcr: string;
   datiEstrattiJson: Record<string, unknown> | null;
+  stato: string | null;
+  mimeType: string | null;
+  dimensione: number | null;
   createdAt: string;
 }
 

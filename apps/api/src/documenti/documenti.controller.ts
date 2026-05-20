@@ -1,4 +1,3 @@
-import { Documento, TipoEntitaDocumento } from '@strade-servizi/db';
 import {
     BadRequestException,
     Body,
@@ -19,6 +18,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Documento, TipoEntitaDocumento } from '@prisma/client';
 import { Response } from 'express';
 import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -124,6 +124,30 @@ export class DocumentiController {
     @Body('datiEstrattiJson') datiEstrattiJson: string,
   ): Promise<Documento> {
     return this.documentiService.patchMetadata(documentoId, datiEstrattiJson);
+  }
+
+  @Patch(':documentoId/replace-file')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE_BYTES },
+      fileFilter: (_req, file, cb) => {
+        if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
+          cb(null, true);
+        } else {
+          cb(new BadRequestException(`Tipo file non consentito: ${file.mimetype}`), false);
+        }
+      },
+    }),
+  )
+  async replaceFile(
+    @Param('documentoId') documentoId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<Documento> {
+    if (!file) {
+      throw new BadRequestException('Nessun file fornito nella richiesta');
+    }
+    return this.documentiService.replaceFile(documentoId, file);
   }
 
   @Delete(':documentoId')

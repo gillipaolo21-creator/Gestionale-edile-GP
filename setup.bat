@@ -2,7 +2,8 @@
 title Strade & Servizi - Setup iniziale (Nativo)
 chcp 65001 >nul
 
-set PROJECT=C:\Gestionale-edile-GP-master
+set "PROJECT=%~dp0"
+if "%PROJECT:~-1%"=="\" set "PROJECT=%PROJECT:~0,-1%"
 
 echo ========================================
 echo  Strade & Servizi - Setup Prima Installazione

@@ -1,4 +1,4 @@
-import { Prisma, Sal, StatoSAL, TipoSAL } from '@strade-servizi/db';
+import { Prisma, Sal, StatoSAL, TipoSAL } from '@prisma/client';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 import { CreateSalDto, UpdateSalDto } from './sal.dto';

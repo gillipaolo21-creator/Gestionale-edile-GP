@@ -12,7 +12,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { AssegnazioneMezzo, Mezzo, ScadenzaMezzo, StatoMezzo, TipoMezzo } from '@strade-servizi/db';
+import { AssegnazioneMezzo, Mezzo, ScadenzaMezzo, StatoMezzo, TipoMezzo } from '@prisma/client';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import {
     CreateAssegnazioneMezzoDto,

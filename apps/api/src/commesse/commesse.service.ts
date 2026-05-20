@@ -1,4 +1,4 @@
-import { Commessa, Prisma, StatoCommessa, TipoOpera } from '@strade-servizi/db';
+import { Commessa, Prisma, StatoCommessa, TipoOpera } from '@prisma/client';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommessaDto, UpdateCommessaDto } from './commesse.dto';

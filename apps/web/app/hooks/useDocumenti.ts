@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 import React, { useMemo, useState } from 'react';
-import { apiFetch } from './apiFetch';
 import type { VarianteVoce } from '../components/VarianteModal';
 import type { Commessa, Documento, DocumentoMetadata, Fornitore } from '../types/domain';
+import { apiFetch } from './apiFetch';
 
 type ContrattoClienteForm = {
   nomeCliente: string;
@@ -132,6 +132,29 @@ export function useDocumenti(
       if (selectedCommessa) await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Errore durante l'eliminazione della variante");
+    }
+  };
+
+  /**
+   * Sostituisce il file fisico di un documento/variante.
+   * Il backend crea automaticamente un backup con suffisso timestamp
+   * e aggiorna l'hash SHA256.
+   */
+  const handleReplaceVarianteFile = async (documentoId: string, file: File) => {
+    setIsUploading(true);
+    setError(null);
+    try {
+      const payload = new FormData();
+      payload.append('file', file);
+      await apiFetch(`${baseUrl}/api/documenti/${documentoId}/replace-file`, {
+        method: 'PATCH',
+        body: payload,
+      });
+      if (selectedCommessa) await fetchDocumenti(selectedCommessa.id);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Errore durante la sostituzione del file');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -559,6 +582,7 @@ export function useDocumenti(
     // handlers
     fetchDocumenti,
     handleDeleteVariante,
+    handleReplaceVarianteFile,
     handleUpdateDocStato,
     handleContrattoClienteUpload,
     handleVarianteUpload,

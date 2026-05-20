@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { DocumentoSicurezza } from '@strade-servizi/db';
+import { DocumentoSicurezza } from '@prisma/client';
 import { PrismaService } from './prisma/prisma.service';
 import { CreateDocumentoSicurezzaDto, UpdateDocumentoSicurezzaDto } from './sicurezza.dto';
 

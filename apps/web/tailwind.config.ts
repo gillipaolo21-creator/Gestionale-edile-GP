@@ -15,14 +15,16 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          // Il Blu Royal dal nuovo logo
-          blue: "#0054B4",
-          // Navy profondo per testi e sidebar (Autorità)
-          dark: "#003A7D",
-          // Manteniamo il panna per lo sfondo (Eleganza/Lusso)
-          panna: "#F9F8F6",
-          // Grigio tecnico per i bordi
-          slate: "#E2E8F0"
+          // Forest green primario - Eucalyptus grove
+          blue: "#4B6E48",
+          // Verde scuro per elementi di enfasi
+          dark: "#2D4A2A",
+          // Off-white crema per lo sfondo
+          panna: "#F2F0EF",
+          // Grigio neutro
+          slate: "#898989",
+          // Salvia polverosa
+          sage: "#B2AC88"
         }
       }
     },

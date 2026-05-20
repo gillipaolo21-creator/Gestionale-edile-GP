@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { UploadCloud, X } from 'lucide-react';
 import React, { useRef, useState } from 'react';
@@ -36,23 +36,23 @@ export function AllegatiFornitoreModal({ isOpen, fornitori, onClose, onSubmit }:
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={handleClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+      <div className="bg-gray-100 rounded-2xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
-          <h3 className="text-sm font-black text-[#003A7D] uppercase tracking-widest">Carica Documento Fornitore</h3>
-          <button onClick={handleClose} className="p-1 hover:bg-stone-100 rounded-lg transition-colors">
-            <X size={18} className="text-stone-400" />
+          <h3 className="text-sm font-black text-[#4B6E48] uppercase tracking-widest">Carica Documento Fornitore</h3>
+          <button onClick={handleClose} className="p-1 hover:bg-slate-600/50 rounded-lg transition-colors">
+            <X size={18} className="text-gray-600" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Fornitore */}
           <div className="space-y-2">
-            <label className="text-[8px] font-black text-stone-400 uppercase tracking-widest">Fornitore *</label>
+            <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Fornitore *</label>
             <select
               required
               value={selectedFornitore}
               onChange={e => setSelectedFornitore(e.target.value)}
-              className="w-full bg-[#FBFBFB] border border-stone-300 rounded-xl px-4 py-3 text-sm font-bold text-[#003A7D] outline-none focus:border-[#0054B4] transition-colors"
+              className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors"
             >
               <option value="">Seleziona fornitore...</option>
               {fornitori.map(f => (
@@ -63,25 +63,25 @@ export function AllegatiFornitoreModal({ isOpen, fornitori, onClose, onSubmit }:
 
           {/* Descrizione */}
           <div className="space-y-2">
-            <label className="text-[8px] font-black text-stone-400 uppercase tracking-widest">Descrizione</label>
+            <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Descrizione</label>
             <input
               type="text"
               value={descrizione}
               onChange={e => setDescrizione(e.target.value)}
               placeholder="Es: Certificazione SOA, DURC, ecc."
-              className="w-full bg-[#FBFBFB] border border-stone-300 rounded-xl px-4 py-3 text-sm font-bold text-[#003A7D] outline-none focus:border-[#0054B4] transition-colors"
+              className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors"
             />
           </div>
 
           {/* File upload */}
           <div className="space-y-2">
-            <label className="text-[8px] font-black text-stone-400 uppercase tracking-widest">File *</label>
+            <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">File *</label>
             <div
               onClick={() => inputRef.current?.click()}
-              className="border border-dashed border-stone-300 rounded-xl p-4 flex items-center justify-center gap-2 cursor-pointer hover:bg-stone-50 hover:border-[#0054B4]/50 transition-colors"
+              className="border border-dashed border-slate-500 rounded-xl p-4 flex items-center justify-center gap-2 cursor-pointer hover:bg-gray-50 hover:border-[#4B6E48]/50 transition-colors"
             >
-              <UploadCloud size={18} className="text-stone-400" />
-              <span className="text-xs font-bold text-stone-500">
+              <UploadCloud size={18} className="text-gray-600" />
+              <span className="text-xs font-bold text-gray-600">
                 {files.length > 0 ? `${files.length} file selezionat${files.length === 1 ? 'o' : 'i'}` : 'Clicca per selezionare i file'}
               </span>
             </div>
@@ -97,7 +97,7 @@ export function AllegatiFornitoreModal({ isOpen, fornitori, onClose, onSubmit }:
             {files.length > 0 && (
               <div className="space-y-1">
                 {files.map((f, i) => (
-                  <div key={i} className="text-[10px] text-stone-400 truncate">{f.name}</div>
+                  <div key={i} className="text-[10px] text-gray-600 truncate">{f.name}</div>
                 ))}
               </div>
             )}
@@ -105,13 +105,13 @@ export function AllegatiFornitoreModal({ isOpen, fornitori, onClose, onSubmit }:
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={handleClose} className="px-4 py-2 text-xs font-bold text-stone-500 border border-stone-200 rounded-xl hover:bg-stone-50 transition-colors">
+            <button type="button" onClick={handleClose} className="px-4 py-2 text-xs font-bold text-gray-600 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
               Annulla
             </button>
             <button
               type="submit"
               disabled={!selectedFornitore || files.length === 0}
-              className="px-5 py-2 text-xs font-black text-white bg-[#0054B4] rounded-xl hover:bg-[#003A7D] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-5 py-2 text-xs font-black text-white bg-[#4B6E48] rounded-xl hover:bg-[#4B6E48] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Carica
             </button>

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useMemo, useState } from 'react';
 import { apiFetch } from './apiFetch';
 import type { ApiAppaltoVoce } from '../types/domain';

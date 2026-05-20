@@ -12,7 +12,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { DocumentoSicurezza } from '@strade-servizi/db';
+import { DocumentoSicurezza } from '@prisma/client';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CreateDocumentoSicurezzaDto, UpdateDocumentoSicurezzaDto } from './sicurezza.dto';
 import { SicurezzaService } from './sicurezza.service';

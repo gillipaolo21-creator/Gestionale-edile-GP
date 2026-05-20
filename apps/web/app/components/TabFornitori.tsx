@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { ChevronRight, Download, Eye, FileText, Plus, Truck, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import type { Documento, DocumentoMetadata, Fornitore } from '../types/domain';
@@ -25,12 +25,12 @@ export function TabFornitori({
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4">
       {fornitoriDaDocumenti.length === 0 ? (
-        <div className="p-10 border border-dashed border-stone-200 rounded-2xl text-center text-stone-400 text-sm">
+        <div className="p-10 border border-dashed border-gray-300 rounded-2xl text-center text-gray-600 text-sm">
           Nessun fornitore registrato. Aggiungili dall&apos;Archivio Documentale → Contratti Fornitori.
         </div>
       ) : (
-        <div className="bg-white border border-stone-400 rounded-2xl shadow-xl shadow-stone-400/50 overflow-hidden">
-          <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 px-5 py-2.5 bg-stone-50 border-b border-stone-100 text-[9px] font-black uppercase tracking-widest text-stone-400">
+        <div className="bg-gray-100 border border-slate-300 rounded-2xl shadow-xl shadow-slate-300/50 overflow-hidden">
+          <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 px-5 py-2.5 bg-gray-50 border-b border-stone-100 text-[9px] font-black uppercase tracking-widest text-gray-600">
             <span className="w-6" />
             <span>Fornitore</span>
             <span className="text-right w-16">Doc.</span>
@@ -52,7 +52,7 @@ export function TabFornitori({
               return (
                 <div key={fornitore.ragioneSociale}>
                   <div
-                    className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 px-5 py-3 hover:bg-stone-50 transition-colors cursor-pointer"
+                    className="grid grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={() => setExpandedFornitoriIds(prev => {
                       const next = new Set(prev);
                       next.has(fornitore.ragioneSociale) ? next.delete(fornitore.ragioneSociale) : next.add(fornitore.ragioneSociale);
@@ -62,7 +62,7 @@ export function TabFornitori({
                     <ChevronRight
                       size={14}
                       strokeWidth={2.5}
-                      className={`text-stone-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                      className={`text-gray-600 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
                     />
 
                     <div className="min-w-0">
@@ -71,9 +71,9 @@ export function TabFornitori({
                           {isServizio ? <Wrench size={9} /> : <Truck size={9} />}
                           {isServizio ? 'Subappalto' : 'Materiali'}
                         </span>
-                        <p className="text-sm font-bold text-[#003A7D] truncate">{fornitore.ragioneSociale}</p>
+                        <p className="text-sm font-bold text-[#4B6E48] truncate">{fornitore.ragioneSociale}</p>
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5 text-[9px] font-semibold text-stone-400">
+                      <div className="flex items-center gap-2 mt-0.5 text-[9px] font-semibold text-gray-600">
                         {fornitore.partitaIva && <span>P.IVA {fornitore.partitaIva}</span>}
                         {fornitore.attivita && <><span>&bull;</span><span>{fornitore.attivita}</span></>}
                         {fornitore.referente && <><span>&bull;</span><span>{fornitore.referente}</span></>}
@@ -82,15 +82,15 @@ export function TabFornitori({
                     </div>
 
                     <div className="w-16 text-right">
-                      <span className="text-xs font-black text-[#003A7D]">{docs.length}</span>
-                      <span className="text-[9px] text-stone-400 ml-1">file</span>
+                      <span className="text-xs font-black text-[#4B6E48]">{docs.length}</span>
+                      <span className="text-[9px] text-gray-600 ml-1">file</span>
                     </div>
 
                     <div className="w-28 text-right">
                       {totaleImporto > 0 ? (
-                        <span className="text-sm font-black text-[#003A7D]">€ {totaleImporto.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-sm font-black text-[#4B6E48]">€ {totaleImporto.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       ) : (
-                        <span className="text-[10px] text-stone-300">—</span>
+                        <span className="text-[10px] text-gray-800">—</span>
                       )}
                     </div>
 
@@ -99,7 +99,7 @@ export function TabFornitori({
                         e.stopPropagation();
                         onAddDocForFornitore(fornitore);
                       }}
-                      className="w-28 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[9px] font-black text-[#0054B4] uppercase tracking-widest border border-[#0054B4]/30 rounded-lg hover:bg-blue-50 transition-colors"
+                      className="w-28 flex items-center justify-center gap-1.5 px-3 py-1.5 text-[9px] font-black text-[#4B6E48] uppercase tracking-widest border border-[#4B6E48]/30 rounded-lg hover:bg-blue-50 transition-colors"
                     >
                       <Plus size={10} /> Aggiungi
                     </button>
@@ -108,9 +108,9 @@ export function TabFornitori({
                   </div>
 
                   {isExpanded && (
-                    <div className="bg-stone-50/60 border-t border-stone-100">
+                    <div className="bg-gray-50/60 border-t border-stone-100">
                       {docs.length === 0 ? (
-                        <p className="px-14 py-3 text-[10px] text-stone-400 italic">Nessun documento operativo caricato.</p>
+                        <p className="px-14 py-3 text-[10px] text-gray-600 italic">Nessun documento operativo caricato.</p>
                       ) : (
                         <div className="divide-y divide-stone-100">
                           {docs.map((doc) => {
@@ -120,12 +120,12 @@ export function TabFornitori({
 
                             const statoConfig: Record<string, { label: string; color: string; bg: string; activeBg: string; activeText: string }[]> = {
                               'Preventivo': [
-                                { label: 'Ricevuto', color: 'text-stone-500', bg: 'bg-stone-100 border-stone-200', activeBg: 'bg-stone-500', activeText: 'text-white' },
-                                { label: 'Trattativa', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-200', activeBg: 'bg-amber-500', activeText: 'text-white' },
+                                { label: 'Ricevuto', color: 'text-gray-600', bg: 'bg-slate-600/50 border-gray-300', activeBg: 'bg-gray-500', activeText: 'text-white' },
+                                { label: 'Trattativa', color: 'text-[#4B6E48]', bg: 'bg-[#F2F0EF] border-[#B2AC88]', activeBg: 'bg-[#4B6E48]', activeText: 'text-white' },
                                 { label: 'Approvato', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', activeBg: 'bg-emerald-500', activeText: 'text-white' },
                               ],
                               'Fattura': [
-                                { label: 'Ricevuta', color: 'text-stone-500', bg: 'bg-stone-100 border-stone-200', activeBg: 'bg-stone-500', activeText: 'text-white' },
+                                { label: 'Ricevuta', color: 'text-gray-600', bg: 'bg-slate-600/50 border-gray-300', activeBg: 'bg-gray-500', activeText: 'text-white' },
                                 { label: 'Approvata', color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200', activeBg: 'bg-blue-500', activeText: 'text-white' },
                                 { label: 'Pagata', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', activeBg: 'bg-emerald-500', activeText: 'text-white' },
                               ],
@@ -133,29 +133,29 @@ export function TabFornitori({
                                 { label: 'Approvata', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', activeBg: 'bg-emerald-500', activeText: 'text-white' },
                               ],
                               'Consuntivo': [
-                                { label: 'Ricevuto', color: 'text-stone-500', bg: 'bg-stone-100 border-stone-200', activeBg: 'bg-stone-500', activeText: 'text-white' },
+                                { label: 'Ricevuto', color: 'text-gray-600', bg: 'bg-slate-600/50 border-gray-300', activeBg: 'bg-gray-500', activeText: 'text-white' },
                                 { label: 'Approvato', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', activeBg: 'bg-emerald-500', activeText: 'text-white' },
                               ],
                               'SAL': [
-                                { label: 'Ricevuto', color: 'text-stone-500', bg: 'bg-stone-100 border-stone-200', activeBg: 'bg-stone-500', activeText: 'text-white' },
+                                { label: 'Ricevuto', color: 'text-gray-600', bg: 'bg-slate-600/50 border-gray-300', activeBg: 'bg-gray-500', activeText: 'text-white' },
                                 { label: 'Approvato', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', activeBg: 'bg-emerald-500', activeText: 'text-white' },
                               ],
                             };
 
                             const steps = statoConfig[tipo] ?? [
-                              { label: 'Ricevuto', color: 'text-stone-500', bg: 'bg-stone-100 border-stone-200', activeBg: 'bg-stone-500', activeText: 'text-white' },
+                              { label: 'Ricevuto', color: 'text-gray-600', bg: 'bg-slate-600/50 border-gray-300', activeBg: 'bg-gray-500', activeText: 'text-white' },
                               { label: 'Approvato', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200', activeBg: 'bg-emerald-500', activeText: 'text-white' },
                             ];
                             const statoIdx = steps.findIndex(s => s.label === statoCorrente);
 
                             return (
-                              <div key={doc.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-3 hover:bg-white transition-colors">
+                              <div key={doc.id} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-4 px-5 py-3 hover:bg-gray-100 transition-colors">
                                 <div className="w-6 flex justify-center self-start pt-0.5">
-                                  <FileText size={13} className="text-stone-300" />
+                                  <FileText size={13} className="text-gray-800" />
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="text-xs font-semibold text-[#003A7D] truncate">{tipo || doc.nomeFile}</p>
-                                  <div className="flex items-center gap-2 text-[9px] text-stone-400 mt-0.5">
+                                  <p className="text-xs font-semibold text-[#4B6E48] truncate">{tipo || doc.nomeFile}</p>
+                                  <div className="flex items-center gap-2 text-[9px] text-gray-600 mt-0.5">
                                     <span className="truncate">{doc.nomeFile}</span>
                                     {meta.tempiPagamento && <><span>&bull;</span><span>{meta.tempiPagamento}</span></>}
                                     {meta.note && <><span>&bull;</span><span className="italic">{meta.note}</span></>}
@@ -184,14 +184,14 @@ export function TabFornitori({
                                 </div>
                                 <div className="text-right shrink-0 self-start pt-0.5">
                                   {meta.importo ? (
-                                    <span className="text-xs font-bold text-[#003A7D]">€ {Number(meta.importo).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                  ) : <span className="text-[10px] text-stone-300">—</span>}
+                                    <span className="text-xs font-bold text-[#4B6E48]">€ {Number(meta.importo).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                  ) : <span className="text-[10px] text-gray-800">—</span>}
                                 </div>
                                 <div className="flex items-center gap-1 justify-end shrink-0 self-start pt-0.5">
-                                  <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-1.5 text-stone-400 hover:text-[#0054B4] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
+                                  <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-1.5 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
                                     <Eye size={13} />
                                   </button>
-                                  <a href={`${baseUrl}/api/documenti/${doc.id}/download`} target="_blank" rel="noopener noreferrer" className="p-1.5 text-stone-400 hover:text-[#0054B4] hover:bg-blue-50 rounded-lg transition-colors">
+                                  <a href={`${baseUrl}/api/documenti/${doc.id}/download`} target="_blank" rel="noopener noreferrer" className="p-1.5 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors">
                                     <Download size={13} />
                                   </a>
                                 </div>

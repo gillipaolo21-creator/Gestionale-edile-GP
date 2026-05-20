@@ -1,4 +1,4 @@
-import { Qualifica } from '@strade-servizi/db';
+import { Qualifica } from '@prisma/client';
 import { IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreatePersonaleDto {

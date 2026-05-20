@@ -12,7 +12,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { DpiAssegnato, Personale, PresenzaGiornaliera, Qualifica, ScadenzaCorsoSicurezza } from '@strade-servizi/db';
+import { DpiAssegnato, Personale, PresenzaGiornaliera, Qualifica, ScadenzaCorsoSicurezza } from '@prisma/client';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import {
     CreateCorsoSicurezzaDto,

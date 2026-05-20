@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Sal, TipoSAL } from '@strade-servizi/db';
+import { Sal, TipoSAL } from '@prisma/client';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CreateSalDto, UpdateSalDto } from './sal.dto';
 import { SalService } from './sal.service';

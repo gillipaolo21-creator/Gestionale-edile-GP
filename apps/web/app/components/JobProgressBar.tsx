@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { AlertCircle, CheckCircle2, Clock, Loader2, X } from 'lucide-react';
 import type { JobState, JobStatus } from '../hooks/useJobPolling';
 
@@ -15,8 +15,8 @@ const STATUS_CONFIG: Record<JobStatus, { label: string; color: string; icon: Rea
   },
   IN_ELABORAZIONE: {
     label: 'Elaborazione in corso...',
-    color: 'bg-[#0054B4]',
-    icon: <Loader2 size={14} className="text-[#0054B4] animate-spin" />,
+    color: 'bg-[#4B6E48]',
+    icon: <Loader2 size={14} className="text-[#4B6E48] animate-spin" />,
   },
   COMPLETATO: {
     label: 'Importazione completata',
@@ -48,11 +48,11 @@ export function JobProgressBar({ job, onDismiss }: JobProgressBarProps) {
   const fileName = job.documento?.nomeFile ?? 'file';
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 w-96 bg-white rounded-2xl border shadow-2xl shadow-stone-400/30 overflow-hidden transition-all animate-in slide-in-from-bottom-4 duration-500 ${
-      job.stato === 'ERRORE' ? 'border-red-200' : job.stato === 'COMPLETATO' ? 'border-emerald-200' : 'border-stone-200'
+    <div className={`fixed bottom-6 right-6 z-50 w-96 bg-gray-100 rounded-2xl border shadow-2xl shadow-slate-300/30 overflow-hidden transition-all animate-in slide-in-from-bottom-4 duration-500 ${
+      job.stato === 'ERRORE' ? 'border-red-200' : job.stato === 'COMPLETATO' ? 'border-emerald-200' : 'border-gray-300'
     }`}>
       {/* Barra progresso */}
-      <div className="h-1 w-full bg-stone-100">
+      <div className="h-1 w-full bg-slate-600/50">
         <div
           className={`h-full transition-all duration-700 ease-out ${config.color} ${!isTerminal ? 'animate-pulse' : ''}`}
           style={{ width: `${progress}%` }}
@@ -64,16 +64,16 @@ export function JobProgressBar({ job, onDismiss }: JobProgressBarProps) {
           <div className="flex items-center gap-2.5 min-w-0">
             {config.icon}
             <div className="min-w-0">
-              <p className="text-[11px] font-black text-[#003A7D] uppercase tracking-wider truncate">
+              <p className="text-[11px] font-black text-[#4B6E48] uppercase tracking-wider truncate">
                 {config.label}
               </p>
-              <p className="text-[10px] text-stone-400 truncate mt-0.5">{fileName}</p>
+              <p className="text-[10px] text-gray-600 truncate mt-0.5">{fileName}</p>
             </div>
           </div>
           {isTerminal && (
             <button
               onClick={onDismiss}
-              className="w-6 h-6 flex items-center justify-center rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-colors flex-shrink-0"
+              className="w-6 h-6 flex items-center justify-center rounded-lg text-gray-600 hover:text-gray-800 hover:bg-slate-600/50 transition-colors flex-shrink-0"
             >
               <X size={12} strokeWidth={2.5} />
             </button>

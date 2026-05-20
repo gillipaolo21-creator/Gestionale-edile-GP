@@ -1,9 +1,9 @@
+import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { Documento, TipoEntitaDocumento } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { Documento, TipoEntitaDocumento } from '@strade-servizi/db';
-import { Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -39,6 +39,22 @@ export class DocumentiService implements OnModuleInit {
     sottocategoria?: string,
     _datiEstrattiJson?: string,
   ): Promise<Documento> {
+
+    // Verifiche per COMMESSA e relative categorie
+    if (entitaTipo === TipoEntitaDocumento.COMMESSA) {
+      if (!categoria) {
+        throw new BadRequestException('Categoria obbligatoria per entità COMMESSA');
+      }
+
+      const commessa = await this.prisma.commessa.findUnique({
+        where: { id: entitaId }
+      });
+
+      if (!commessa) {
+        throw new NotFoundException(`Commessa con id ${entitaId} non trovata`);
+      }
+    }
+
     const hash = createHash('sha256').update(file.buffer).digest('hex');
     const sanitizedOriginal = this.sanitize(file.originalname);
     const uniqueName = `${Date.now()}_${sanitizedOriginal}`;
@@ -70,6 +86,8 @@ export class DocumentiService implements OnModuleInit {
         storageUrl: filePath,
         hashFile: hash,
         categoria: categoria ?? null,
+        sottocategoria: sottocategoria ?? null,
+        datiEstrattiJson: _datiEstrattiJson ?? null,
         mimeType: file.mimetype,
         dimensione: file.size,
       },
@@ -105,7 +123,7 @@ export class DocumentiService implements OnModuleInit {
 
   async exportCommessaZip(commessaId: string): Promise<{ stream: NodeJS.ReadableStream; filename: string }> {
     const docs = await this.prisma.documento.findMany({ where: { commessaId } });
-    const { Readable } = await import('stream');
+    const { Readable } = await import('node:stream');
 
     if (docs.length === 0) {
       const empty = new Readable({ read() { this.push(null); } });
@@ -118,7 +136,7 @@ export class DocumentiService implements OnModuleInit {
         try { await fs.access(d.storageUrl); return d.storageUrl; } catch { return null; }
       }),
     );
-    const valid = filePaths.filter(Boolean) as string[];
+    const valid = filePaths.filter((p): p is string => Boolean(p));
     if (valid.length === 0) {
       const empty = new Readable({ read() { this.push(null); } });
       return { stream: empty, filename: `commessa_${commessaId}.zip` };
@@ -143,14 +161,56 @@ export class DocumentiService implements OnModuleInit {
     return [];
   }
 
-  async updateStato(documentoId: string, _stato: string): Promise<Documento> {
+  async updateStato(documentoId: string, stato: string): Promise<Documento> {
     const doc = await this.prisma.documento.findUnique({ where: { id: documentoId } });
     if (!doc) throw new NotFoundException(`Documento ${documentoId} non trovato`);
-    return doc;
+    return this.prisma.documento.update({
+      where: { id: documentoId },
+      data: { stato },
+    });
   }
 
-  async patchMetadata(documentoId: string, _datiEstrattiJson: string): Promise<Documento> {
-    return this.updateStato(documentoId, _datiEstrattiJson);
+  async patchMetadata(documentoId: string, datiEstrattiJson: string): Promise<Documento> {
+    const doc = await this.prisma.documento.findUnique({ where: { id: documentoId } });
+    if (!doc) throw new NotFoundException(`Documento ${documentoId} non trovato`);
+    return this.prisma.documento.update({
+      where: { id: documentoId },
+      data: { datiEstrattiJson },
+    });
+  }
+
+  /**
+   * Sostituisce il file fisico di un documento esistente.
+   * Il vecchio file viene rinominato con suffisso timestamp come backup.
+   * Aggiorna hashFile e dimensione nel DB.
+   */
+  async replaceFile(documentoId: string, file: Express.Multer.File): Promise<Documento> {
+    const doc = await this.prisma.documento.findUnique({ where: { id: documentoId } });
+    if (!doc) throw new NotFoundException(`Documento ${documentoId} non trovato`);
+
+    // Backup del file precedente con suffisso timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const backupPath = `${doc.storageUrl}.${timestamp}.bak`;
+    try {
+      await fs.rename(doc.storageUrl, backupPath);
+    } catch {
+      this.logger.warn(`Backup non riuscito per ${doc.storageUrl} — sostituzione diretta`);
+    }
+
+    // Scrivi nuovo file nella stessa posizione
+    await fs.writeFile(doc.storageUrl, file.buffer);
+
+    // Aggiorna hash SHA256 e dimensione
+    const nuovoHash = createHash('sha256').update(file.buffer).digest('hex');
+    return this.prisma.documento.update({
+      where: { id: documentoId },
+      data: {
+        hashFile: nuovoHash,
+        dimensione: file.size,
+        nomeFile: this.sanitize(file.originalname),
+        mimeType: file.mimetype,
+      },
+    });
   }
 
   async deleteDocumento(documentoId: string): Promise<void> {
@@ -498,7 +558,7 @@ export class DocumentiService implements OnModuleInit {
     }
 
     const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
-    const { Readable } = await import('stream');
+    const { Readable } = await import('node:stream');
     const stream = Readable.from(buffer);
 
     return {
