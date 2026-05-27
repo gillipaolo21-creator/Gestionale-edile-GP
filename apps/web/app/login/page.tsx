@@ -1,7 +1,7 @@
 ﻿'use client';
-import { AlertCircle, Loader2, Lock, Mail } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
@@ -11,13 +11,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Redirect automatico se già loggato
-  if (user) {
-    router.push('/');
-  }
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
 
-  const handleSubmit = async (e: SubmitEvent & { currentTarget: HTMLFormElement }) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -32,27 +35,42 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F2F0EF]">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="w-full max-w-md px-4">
+
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#4B6E48] mb-4 shadow-lg">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
+          {/* Icona montagna/strada verde + testo STRADE e servizi */}
+          <div className="inline-flex flex-col items-center mb-2">
+            <div className="inline-flex items-center gap-2">
+              {/* Icona verde stile logo sito */}
+              <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Montagna / strada */}
+                <polygon points="24,6 44,38 4,38" fill="#41755A" />
+                <polygon points="24,14 36,38 12,38" fill="#2d5c3a" />
+                {/* Strada centrale */}
+                <rect x="21" y="28" width="6" height="10" fill="#FCBF1B" />
+              </svg>
+              <div className="text-left leading-tight">
+                <div className="text-[#8B1A1A] font-extrabold text-2xl tracking-tight leading-none">STRADE</div>
+                <div className="text-gray-600 font-medium text-sm tracking-wide leading-none">e servizi</div>
+              </div>
+            </div>
+            {/* Barra gialla accent sotto il logo, come la nav del sito */}
+            <div className="h-0.5 w-16 bg-[#FCBF1B] mt-2 rounded-full" />
           </div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Strade & Servizi</h1>
-          <p className="text-gray-600 text-sm mt-1">Gestionale Edile — Accesso riservato</p>
+          <p className="text-gray-500 text-sm mt-3">Gestionale Edile — Accesso riservato</p>
         </div>
 
         {/* Card */}
-        <div className="bg-gray-100/80 backdrop-blur border border-gray-300 rounded-2xl p-8 shadow-2xl">
+        <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-lg">
           <form onSubmit={handleSubmit} className="space-y-5">
+
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-800 mb-1.5">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   id="email"
                   type="email"
@@ -60,7 +78,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#4B6E48] focus:ring-1 focus:ring-[#4B6E48] transition"
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#41755A] focus:ring-1 focus:ring-[#41755A] transition"
                   placeholder="nome@azienda.it"
                 />
               </div>
@@ -68,35 +86,44 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-800 mb-1.5">Password</label>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   id="password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-500 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:border-[#4B6E48] focus:ring-1 focus:ring-[#4B6E48] transition"
+                  className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#41755A] focus:ring-1 focus:ring-[#41755A] transition"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#41755A] transition"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Nascondi password' : 'Mostra password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
             {/* Error */}
             {error && (
-              <div className="flex items-center gap-2 bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-3 py-2 text-sm">
+              <div className="flex items-center gap-2 bg-red-50 border border-red-300 text-red-700 rounded-lg px-3 py-2 text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
-            {/* Submit */}
+            {/* Submit — verde come il pulsante "SCRIVICI UNA MAIL" del sito */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-[#4B6E48] hover:bg-[#5a8057] disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-[#4B6E48] focus:ring-offset-2 focus:ring-offset-[#F2F0EF]"
+              className="w-full flex items-center justify-center gap-2 bg-[#41755A] hover:bg-[#2d5c3a] disabled:opacity-50 text-white font-bold py-2.5 rounded-lg tracking-wide uppercase text-sm transition focus:outline-none focus:ring-2 focus:ring-[#41755A] focus:ring-offset-2"
             >
               {isLoading ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Accesso in corso…</>
@@ -107,8 +134,8 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p className="text-center text-gray-800 text-xs mt-6">
-          © {new Date().getFullYear()} Strade & Servizi — Uso interno riservato
+        <p className="text-center text-gray-600 text-xs mt-6">
+          © {new Date().getFullYear()} Strade & Servizi S.r.l. — Uso interno riservato
         </p>
       </div>
     </div>

@@ -102,6 +102,10 @@ export interface ApiAppaltoVoce {
   quantita: string; // Decimal → string
   prezzoUnitario: string;
   avanzamentoPercent: string;
+  costoPrevisto: string;
+  costoEffettivo: string;
+  ricavoPrevisto: string;
+  ricavoEffettivo: string;
   createdAt: string;
   updatedAt: string;
 }

@@ -97,6 +97,22 @@ export class DocumentiController {
     return this.documentiService.listPmFolders();
   }
 
+  @Get('pm-folders/:folder/files')
+  async listPmFolderFiles(
+    @Param('folder') folder: string,
+  ): Promise<{ name: string; size: number }[]> {
+    return this.documentiService.listFilesInPmFolder(folder);
+  }
+
+  @Post('pm-folders/:folder/import')
+  @HttpCode(HttpStatus.OK)
+  async importFromPmFolder(
+    @Param('folder') folder: string,
+    @Body() body: { commessaId: string; fileNames: string[]; categoria: string },
+  ): Promise<Documento[]> {
+    return this.documentiService.importFromPmFolder(folder, body.fileNames, body.commessaId, body.categoria);
+  }
+
   @Get('pending')
   async getPending(): Promise<any[]> {
     return this.documentiService.findPending();

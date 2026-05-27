@@ -1,69 +1,41 @@
 @echo off
-title Strade & Servizi - Avvio Sistema
+title Gestionale Edile GP - Avvio
 chcp 65001 >nul
 
 set "PROJECT=%~dp0"
 if "%PROJECT:~-1%"=="\" set "PROJECT=%PROJECT:~0,-1%"
 
-cd /d %PROJECT%
+cd /d "%PROJECT%"
 
-echo ========================================
-echo  Avvio Strade & Servizi (locale nativo)
-echo ========================================
+echo ============================================
+echo   Gestionale Edile GP  -  Avvio Sistema
+echo ============================================
 
 echo.
-echo [0/4] Chiusura processi node.exe precedenti...
+echo [1/3] Chiusura processi Node.js precedenti...
 taskkill /f /im node.exe >nul 2>&1
 
 echo.
-echo [1/4] Verifica servizi locali...
-echo Verifico PostgreSQL...
-"C:\Program Files\PostgreSQL\16\bin\pg_isready.exe" -U postgres >nul 2>&1
-if errorlevel 1 (
-    echo ERRORE: PostgreSQL non raggiungibile su porta 5432!
-    echo Assicurati che il servizio PostgreSQL sia avviato.
-    echo Vai in: Pannello di controllo > Strumenti di amministrazione > Servizi > postgresql-x64-16
-    pause
-    exit /b 1
-)
-echo PostgreSQL OK.
+echo [2/3] Avvio API NestJS (porta 3001)...
+start /min "GP - API" cmd /k "cd /d "%PROJECT%" && pnpm --filter api start:dev"
 
 echo.
-echo Verifico Redis/Memurai su porta 6379...
-netstat -an | find "6379" | find "LISTENING" >nul 2>&1
-if errorlevel 1 (
-    echo ATTENZIONE: Redis/Memurai non sembra attivo sulla porta 6379.
-    echo Avvia Memurai dal menu Start oppure installa da https://www.memurai.com
-    pause
-    exit /b 1
-)
-echo Redis OK.
+echo [3/3] Avvio Frontend Next.js (porta 3000)...
+start /min "GP - Web" cmd /k "cd /d "%PROJECT%" && pnpm --filter web dev"
 
 echo.
-echo [2/4] Applico le migration del database...
-cd /d %PROJECT%\packages\db
-call npx prisma migrate deploy
-call npx prisma generate
-cd /d %PROJECT%
-
-echo.
-echo [3/4] Avvio API NestJS (porta 3001)...
-start /min "Strade & Servizi API" cmd /k "cd /d %PROJECT% && pnpm --filter api start:dev"
-
-echo.
-echo [4/4] Avvio Frontend Next.js (porta 3000)...
-start /min "Strade & Servizi Web" cmd /k "cd /d %PROJECT% && pnpm --filter web dev"
-
-echo.
-echo Attendo avvio server (15 sec)...
-timeout /t 15 /nobreak >nul
+echo Attendo avvio server (20 sec)...
+timeout /t 20 /nobreak >nul
 start http://localhost:3000
 
 echo.
-echo ========================================
-echo  Sistema avviato!
-echo  Frontend: http://localhost:3000
-echo  API:      http://localhost:3001
-echo  Swagger:  http://localhost:3001/api/docs
-echo ========================================
-pause
+echo ============================================
+echo   Sistema avviato!
+echo   Frontend : http://localhost:3000
+echo   API      : http://localhost:3001
+echo   Swagger  : http://localhost:3001/api/docs
+echo ============================================
+echo.
+echo Premi un tasto per chiudere questa finestra.
+echo (I server continueranno a girare in background)
+pause >nul

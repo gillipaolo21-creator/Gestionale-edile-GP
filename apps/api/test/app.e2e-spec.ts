@@ -1,8 +1,9 @@
 import { BadRequestException, INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Documento, TipoEntitaDocumento } from '@strade-servizi/db';
-import { Readable } from 'stream';
+import { Readable } from 'node:stream';
 import * as request from 'supertest';
+import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
 import { DocumentiController } from '../src/documenti/documenti.controller';
 import { DocumentiService } from '../src/documenti/documenti.service';
 
@@ -14,7 +15,7 @@ describe('DocumentiController (e2e)', () => {
   const getFileStream = jest.fn();
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
+    const moduleBuilder = Test.createTestingModule({
       controllers: [DocumentiController],
       providers: [
         {
@@ -26,7 +27,11 @@ describe('DocumentiController (e2e)', () => {
           },
         },
       ],
-    }).compile();
+    });
+
+    moduleBuilder.overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true });
+
+    const moduleFixture: TestingModule = await moduleBuilder.compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
@@ -63,14 +68,18 @@ describe('DocumentiController (e2e)', () => {
     const now = new Date('2026-04-09T12:00:00.000Z');
     const documento: Documento = {
       id: '22222222-2222-4222-8222-222222222222',
+      commessaId,
       entitaTipo: TipoEntitaDocumento.COMMESSA,
       entitaId: commessaId,
       nomeFile: 'contratto.pdf',
       storageUrl: 'file:///C:/Storage/Commesse/contratto.pdf',
       hashFile: 'abc123',
       categoria: 'Contratti Cliente',
-      statoOcr: 'NON_RICHIESTO',
+      sottocategoria: null,
       datiEstrattiJson: null,
+      stato: 'APPROVATO',
+      mimeType: 'application/pdf',
+      dimensione: 123,
       createdAt: now,
     };
 
@@ -90,6 +99,7 @@ describe('DocumentiController (e2e)', () => {
       TipoEntitaDocumento.COMMESSA,
       commessaId,
       'Contratti Cliente',
+      undefined,
       undefined,
     );
     expect(response.body).toEqual(
@@ -119,14 +129,18 @@ describe('DocumentiController (e2e)', () => {
     const now = new Date('2026-04-09T12:00:00.000Z');
     const documento: Documento = {
       id: '44444444-4444-4444-8444-444444444444',
+      commessaId,
       entitaTipo: TipoEntitaDocumento.COMMESSA,
       entitaId: commessaId,
       nomeFile: 'servizio.pdf',
       storageUrl: 'file:///C:/Storage/Commesse/servizio.pdf',
       hashFile: 'def456',
       categoria: 'Offerte forniture di servizi',
-      statoOcr: 'NON_RICHIESTO',
+      sottocategoria: null,
       datiEstrattiJson: null,
+      stato: 'APPROVATO',
+      mimeType: 'application/pdf',
+      dimensione: 456,
       createdAt: now,
     };
 
@@ -147,6 +161,7 @@ describe('DocumentiController (e2e)', () => {
       commessaId,
       'Offerte forniture di servizi',
       'Impianti Rossi SRL',
+      undefined,
     );
   });
 

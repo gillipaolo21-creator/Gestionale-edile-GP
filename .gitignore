@@ -2,6 +2,9 @@ node_modules
 dist
 .next
 .turbo
+**/.next/
+*.tsbuildinfo
+**/*.tsbuildinfo
 *.env
 !*.env.example
 packages/db/.env

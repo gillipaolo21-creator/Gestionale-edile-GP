@@ -1,5 +1,6 @@
 ﻿'use client';
 import React, { useMemo, useState } from 'react';
+import type { CreateFornitoreFormData } from '../components/CreateFornitoreModal';
 import type { VarianteVoce } from '../components/VarianteModal';
 import type { Commessa, Documento, DocumentoMetadata, Fornitore } from '../types/domain';
 import { apiFetch } from './apiFetch';
@@ -114,6 +115,12 @@ export function useDocumenti(
   const [fornitoreDocFiles, setFornitoreDocFiles] = useState<File[]>([]);
   const [isSavingFornitoreDoc, setIsSavingFornitoreDoc] = useState(false);
 
+  // Modal: Crea Fornitore (senza documento)
+  const [showCreateFornitoreModal, setShowCreateFornitoreModal] = useState(false);
+  const [createFornitoreSuccess, setCreateFornitoreSuccess] = useState(false);
+  const [createFornitoreSubmitting, setCreateFornitoreSubmitting] = useState(false);
+  const [subappaltatoriAnagrafici, setSubappaltatoriAnagrafici] = useState<Fornitore[]>([]);
+
   // ─── Fetches ─────────────────────────────────────────────────────────────
   const fetchDocumenti = async (commessaId: string) => {
     try {
@@ -121,6 +128,46 @@ export function useDocumenti(
       setDocumenti(data ?? []);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossibile recuperare i documenti');
+    }
+  };
+
+  const fetchSubappaltatori = async () => {
+    try {
+      const data = await apiFetch<{ id: string; ragioneSociale: string; specializzazione?: string; referente?: string; telefono?: string; piva?: string }[]>(`${baseUrl}/api/subappaltatori`);
+      setSubappaltatoriAnagrafici((data ?? []).map(s => ({
+        ragioneSociale: s.ragioneSociale,
+        tipo: s.specializzazione ? 'Fornitore di Servizi/Subappaltatore' : 'Fornitore di Materiale',
+        partitaIva: s.piva,
+        referente: s.referente,
+        telefono: s.telefono,
+      })));
+    } catch { /* silent */ }
+  };
+
+  const handleCreateFornitore = async (formData: CreateFornitoreFormData) => {
+    setCreateFornitoreSubmitting(true);
+    try {
+      await apiFetch(`${baseUrl}/api/subappaltatori`, {
+        method: 'POST',
+        body: JSON.stringify({
+          ragioneSociale: formData.ragioneSociale,
+          piva: formData.piva || undefined,
+          referente: formData.referente || undefined,
+          telefono: formData.telefono || undefined,
+          email: formData.email || undefined,
+          specializzazione: formData.specializzazione || undefined,
+        }),
+      });
+      setCreateFornitoreSuccess(true);
+      await fetchSubappaltatori();
+      setTimeout(() => {
+        setCreateFornitoreSuccess(false);
+        setShowCreateFornitoreModal(false);
+      }, 1500);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Errore durante la creazione del fornitore');
+    } finally {
+      setCreateFornitoreSubmitting(false);
     }
   };
 
@@ -467,6 +514,7 @@ export function useDocumenti(
 
   const fornitoriDaDocumenti = useMemo(() => {
     const map = new Map<string, Fornitore>();
+    // Fornitori da documenti
     for (const doc of documenti) {
       if (doc.categoria === 'Contratti Fornitori' && doc.datiEstrattiJson?.ragioneSociale) {
         const rs = doc.datiEstrattiJson.ragioneSociale as string;
@@ -482,8 +530,14 @@ export function useDocumenti(
         }
       }
     }
+    // Fornitori creati direttamente (senza documento) — aggiungi solo se non già presenti
+    for (const s of subappaltatoriAnagrafici) {
+      if (!map.has(s.ragioneSociale)) {
+        map.set(s.ragioneSociale, s);
+      }
+    }
     return Array.from(map.values()).sort((a, b) => a.ragioneSociale.localeCompare(b.ragioneSociale));
-  }, [documenti]);
+  }, [documenti, subappaltatoriAnagrafici]);
 
   const docOperativiPerFornitore = useMemo(() => {
     const map = new Map<string, Documento[]>();
@@ -579,6 +633,12 @@ export function useDocumenti(
     fornitoreDocForm, setFornitoreDocForm,
     fornitoreDocFiles, setFornitoreDocFiles,
     isSavingFornitoreDoc,
+    // Crea Fornitore
+    showCreateFornitoreModal, setShowCreateFornitoreModal,
+    createFornitoreSuccess,
+    createFornitoreSubmitting,
+    handleCreateFornitore,
+    fetchSubappaltatori,
     // handlers
     fetchDocumenti,
     handleDeleteVariante,

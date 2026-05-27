@@ -1,7 +1,9 @@
 ﻿'use client';
 import { Activity, Calendar, CheckCircle2, ChevronRight, Layers, Plus, Target, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Commessa, Fattura } from '../types/domain';
+import { ExcelColumnPickerModal } from './ExcelColumnPickerModal';
+import type { ColumnMapping } from './ExcelColumnPickerModal';
 
 interface AppaltoRow {
   id: string;
@@ -11,6 +13,10 @@ interface AppaltoRow {
   quantita: string;
   prezzoUnitario: string;
   avanzamentoPercent: string;
+  costoPrevisto: string;
+  costoEffettivo: string;
+  ricavoPrevisto: string;
+  ricavoEffettivo: string;
 }
 
 type AppaltoRowFlat = AppaltoRow & {
@@ -31,9 +37,15 @@ interface TabSintesiProps {
   onAddChildRow: (parentId: string) => void;
   onUpdateRow: (rowId: string, field: keyof AppaltoRow, value: string) => void;
   onRemoveRow: (rowId: string) => void;
+  onRemoveRows: (ids: string[]) => void;
+  onClearRows: () => void;
   onToggleRow: (rowId: string) => void;
   onSave: () => void;
   onUpdateDataInizioLavori: (date: string | null) => void;
+  onImportExcel: (file: File) => void;
+  pendingExcelData: { headers: string[]; initialMapping: ColumnMapping } | null;
+  onConfirmExcelMapping: (mapping: ColumnMapping) => void;
+  onCancelExcelMapping: () => void;
 }
 
 export function TabSintesi({
@@ -44,17 +56,61 @@ export function TabSintesi({
   onAddChildRow,
   onUpdateRow,
   onRemoveRow,
+  onRemoveRows,
+  onClearRows,
   onToggleRow,
   onSave,
   onUpdateDataInizioLavori,
+  onImportExcel,
+  pendingExcelData,
+  onConfirmExcelMapping,
+  onCancelExcelMapping,
 }: Readonly<TabSintesiProps>) {
   const [dataInizioLocal, setDataInizioLocal] = useState(
     selectedCommessa.dataInizio ? selectedCommessa.dataInizio.slice(0, 10) : ''
   );
   const isDirty = dataInizioLocal !== (selectedCommessa.dataInizio ? selectedCommessa.dataInizio.slice(0, 10) : '');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const allIds = appaltoRowsFlat.map((r) => r.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selectedIds.has(id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) setSelectedIds(new Set());
+    else setSelectedIds(new Set(allIds));
+  };
+
+  const handleDeleteSelected = () => {
+    onRemoveRows([...selectedIds]);
+    setSelectedIds(new Set());
+  };
+
+  const handleDeleteAll = () => {
+    onClearRows();
+    setSelectedIds(new Set());
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 space-y-8">
+      {pendingExcelData && (
+        <ExcelColumnPickerModal
+          headers={pendingExcelData.headers}
+          initialMapping={pendingExcelData.initialMapping}
+          onConfirm={onConfirmExcelMapping}
+          onCancel={onCancelExcelMapping}
+        />
+      )}
       <div className="grid grid-cols-4 gap-6">
         {[
           { label: 'Costi effettivi', value: `€ ${(selectedCommessa.fatture?.reduce((sum: number, f: Fattura) => sum + Number(f.importoImponibile || 0), 0) || 0).toLocaleString('it-IT')}`, color: 'bg-[#4B6E48] text-white', icon: Activity },
@@ -112,15 +168,37 @@ export function TabSintesi({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-sm font-black text-[#4B6E48] uppercase tracking-widest">Voci in Appalto</h3>
-            <p className="text-xs text-gray-600">Inserimento manuale delle voci di avanzamento</p>
+            <p className="text-xs text-gray-600">{selectedCommessa.codiceIdentificativo} — {selectedCommessa.nomeCantiere}</p>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap justify-end">
             <button
               onClick={onAddRow}
               className="text-[9px] font-black text-[#4B6E48] uppercase tracking-widest hover:underline"
             >
               Aggiungi Riga
             </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="text-[9px] font-black text-[#4B6E48] uppercase tracking-widest hover:underline"
+            >
+              Importa Excel
+            </button>
+            {someSelected && (
+              <button
+                onClick={handleDeleteSelected}
+                className="text-[9px] font-black text-red-600 uppercase tracking-widest hover:underline"
+              >
+                Elimina selezionate ({selectedIds.size})
+              </button>
+            )}
+            {appaltoRowsFlat.length > 0 && (
+              <button
+                onClick={handleDeleteAll}
+                className="text-[9px] font-black text-red-400 uppercase tracking-widest hover:underline"
+              >
+                Elimina tutto
+              </button>
+            )}
             <button
               onClick={onSave}
               disabled={isSavingAppalto}
@@ -130,10 +208,28 @@ export function TabSintesi({
             </button>
           </div>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (file) onImportExcel(file);
+            event.currentTarget.value = '';
+          }}
+        />
 
         <div className="rounded-2xl border border-gray-300 bg-gray-100/60">
-          <div className="max-h-[420px] overflow-y-auto">
-            <div className="hidden lg:grid grid-cols-[2.2fr_0.7fr_0.7fr_0.9fr_0.9fr_0.7fr_0.9fr_56px] gap-2 px-2 py-2 text-[9px] font-black uppercase tracking-widest text-gray-600 sticky top-0 z-10 bg-gray-100/95 backdrop-blur border-b border-stone-100">
+          <div className="max-h-[420px] overflow-y-auto overflow-x-auto">
+            <div className="hidden lg:grid grid-cols-[24px_2.5fr_0.5fr_0.5fr_0.7fr_0.7fr_0.5fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_56px] gap-2 px-2 py-2 text-[9px] font-black uppercase tracking-widest text-gray-600 sticky top-0 z-10 bg-gray-100/95 backdrop-blur border-b border-stone-100">
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 accent-[#4B6E48] cursor-pointer"
+                aria-label="Seleziona tutte le righe"
+              />
               <span>DESCRIZIONE</span>
               <span>u.m</span>
               <span>Q.ta</span>
@@ -141,6 +237,10 @@ export function TabSintesi({
               <span>TOTALE</span>
               <span>AVZ %</span>
               <span>AVZ. €</span>
+              <span>C.PREV</span>
+              <span>C.EFF</span>
+              <span>R.PREV</span>
+              <span>R.EFF</span>
               <span></span>
             </div>
 
@@ -154,7 +254,14 @@ export function TabSintesi({
                   const isAggregated = row.hasChildren;
 
                   return (
-                    <div key={row.id} className="grid gap-2 lg:grid-cols-[2.2fr_0.7fr_0.7fr_0.9fr_0.9fr_0.7fr_0.9fr_56px] items-center border border-stone-100 rounded-xl p-2">
+                    <div key={row.id} className={`grid gap-2 lg:grid-cols-[24px_2.5fr_0.5fr_0.5fr_0.7fr_0.7fr_0.5fr_0.7fr_0.7fr_0.7fr_0.7fr_0.7fr_56px] items-center border rounded-xl p-2 ${selectedIds.has(row.id) ? 'border-red-300 bg-red-50/40' : 'border-stone-100'}`}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(row.id)}
+                        onChange={() => toggleSelect(row.id)}
+                        className="w-4 h-4 accent-[#4B6E48] cursor-pointer"
+                        aria-label="Seleziona riga"
+                      />
                       <div className="flex items-center gap-1" style={{ paddingLeft: row.level ? `${row.level * 12}px` : undefined }}>
                         {row.hasChildren ? (
                           <button
@@ -177,6 +284,7 @@ export function TabSintesi({
                           className="w-full bg-gray-100 border border-gray-300 rounded-lg px-2.5 py-1.5 text-[13px] text-[#4B6E48] font-semibold outline-none focus:border-[#4B6E48]"
                           placeholder="Descrizione lavorazione"
                           value={row.descrizione}
+                          title={row.descrizione}
                           onChange={(e) => onUpdateRow(row.id, 'descrizione', e.target.value)}
                         />
                       </div>
@@ -220,6 +328,42 @@ export function TabSintesi({
                       <div className="text-[13px] font-bold text-[#4B6E48]">
                         € {row.avzEuro.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
+                      <input
+                        type="number"
+                        step="0.01"
+                        disabled={isAggregated}
+                        className={`w-full border rounded-lg px-2 py-1.5 text-[12px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
+                        placeholder="0,00"
+                        value={row.costoPrevisto}
+                        onChange={(e) => onUpdateRow(row.id, 'costoPrevisto', e.target.value)}
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        disabled={isAggregated}
+                        className={`w-full border rounded-lg px-2 py-1.5 text-[12px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
+                        placeholder="auto"
+                        value={row.costoEffettivo || (row.costoPrevisto && row.avanzamentoPercent ? String(Math.round((Number(row.costoPrevisto) * Number(row.avanzamentoPercent)) / 100 * 100) / 100) : '')}
+                        onChange={(e) => onUpdateRow(row.id, 'costoEffettivo', e.target.value)}
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        disabled={isAggregated}
+                        className={`w-full border rounded-lg px-2 py-1.5 text-[12px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
+                        placeholder="0,00"
+                        value={row.ricavoPrevisto}
+                        onChange={(e) => onUpdateRow(row.id, 'ricavoPrevisto', e.target.value)}
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        disabled={isAggregated}
+                        className={`w-full border rounded-lg px-2 py-1.5 text-[12px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
+                        placeholder="auto"
+                        value={row.ricavoEffettivo || (row.ricavoPrevisto && row.avanzamentoPercent ? String(Math.round((Number(row.ricavoPrevisto) * Number(row.avanzamentoPercent)) / 100 * 100) / 100) : '')}
+                        onChange={(e) => onUpdateRow(row.id, 'ricavoEffettivo', e.target.value)}
+                      />
                       <div className="flex items-center justify-end gap-1">
                         <button
                           onClick={() => onAddChildRow(row.id)}

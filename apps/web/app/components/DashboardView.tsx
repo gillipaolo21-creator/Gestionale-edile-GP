@@ -1,5 +1,5 @@
 ﻿'use client';
-import { AlertCircle, Briefcase, ChevronLeft, ChevronRight, FileText, MapPin, Plus, Search, Trash2, X } from 'lucide-react';
+import { AlertCircle, Briefcase, ChevronLeft, ChevronRight, FileInput, FileText, MapPin, Plus, Search, Trash2, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import type { Commessa } from '../types/domain';
 import { CommessaCardSkeleton } from './Skeleton';
@@ -35,6 +35,7 @@ interface DashboardViewProps {
   onOpenDetail: (id: string, tab?: 'sintesi' | 'documenti' | 'fornitori') => void;
   onPreviewDoc: (doc: { id: string; nomeFile: string }) => void;
   onCreateCommessa: () => void;
+  onImportCommessa: () => void;
   onDeleteFromHome: (c: Commessa) => void;
   onUpdatePendingDocStato: (docId: string, stato: string) => void;
   page: number;
@@ -107,7 +108,7 @@ const STATO_STYLE: Record<StatoDisplay, string> = {
   'Chiusa': 'bg-stone-200 text-gray-700 border-[#898989]',
 };
 
-export function DashboardView({ isLoading, commesse, stats, pendingDocs, onOpenDetail, onPreviewDoc, onCreateCommessa, onDeleteFromHome, onUpdatePendingDocStato, page, totalPages, total, onPageChange, pmFolders, onFilterChange }: Readonly<DashboardViewProps>) {
+export function DashboardView({ isLoading, commesse, stats, pendingDocs, onOpenDetail, onPreviewDoc, onCreateCommessa, onImportCommessa, onDeleteFromHome, onUpdatePendingDocStato, page, totalPages, total, onPageChange, pmFolders, onFilterChange }: Readonly<DashboardViewProps>) {
   const [searchInput, setSearchInput] = useState('');
   const [filterStato, setFilterStato] = useState('');
   const [filterPm, setFilterPm] = useState('');
@@ -140,10 +141,12 @@ export function DashboardView({ isLoading, commesse, stats, pendingDocs, onOpenD
     );
   } else {
     commesseGrid = commesse.map(c => (
-      <button
+      <div
         key={c.id}
-        type="button"
+        role="button"
+        tabIndex={0}
         onClick={() => onOpenDetail(c.id)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onOpenDetail(c.id); }}
         className="bg-gray-100 p-6 rounded-2xl border border-slate-300 shadow-xl shadow-slate-300/50 hover:border-[#4B6E48]/30 hover:shadow-2xl transition-all duration-500 group cursor-pointer w-full text-left"
       >
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -192,7 +195,7 @@ export function DashboardView({ isLoading, commesse, stats, pendingDocs, onOpenD
             </div>
           </div>
         </div>
-      </button>
+      </div>
     ));
   }
 
@@ -206,18 +209,27 @@ export function DashboardView({ isLoading, commesse, stats, pendingDocs, onOpenD
           </div>
           <h1 className="text-3xl font-bold tracking-tighter text-[#4B6E48]">Situazione Generale</h1>
         </div>
-        <button
-          onClick={onCreateCommessa}
-          className="group flex items-center gap-3 bg-[#4B6E48] text-white px-6 py-3 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-[#4B6E48] transition-all shadow-sm"
-        >
-          <Plus size={14} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-500" />
-          Crea Commessa
-        </button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={onImportCommessa}
+            className="group flex items-center gap-3 bg-[#F2F0EF] border border-[#B2AC88] text-[#4B6E48] px-6 py-3 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-[#B2AC88]/20 transition-all shadow-sm"
+          >
+            <FileInput size={14} strokeWidth={2.5} />
+            Importa Cantiere
+          </button>
+          <button
+            onClick={onCreateCommessa}
+            className="group flex items-center gap-3 bg-[#4B6E48] text-white px-6 py-3 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-[#4B6E48] transition-all shadow-sm"
+          >
+            <Plus size={14} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-500" />
+            Crea Commessa
+          </button>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 mb-8 md:mb-16">
         {[
-          { label: 'Totale commesse', value: `€ ${stats.totaleCommesse.toLocaleString('it-IT')}` },
+          { label: 'Totale commesse', value: stats.totaleCommesse.toLocaleString('it-IT') },
           { label: 'Costi commesse', value: `€ ${stats.costiCommesse.toLocaleString('it-IT')}` },
           { label: 'Avanzamento cantieri', value: `${stats.avanzamento}%` }
         ].map((s) => (

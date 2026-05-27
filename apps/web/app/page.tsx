@@ -6,10 +6,12 @@ import { ConfirmModals } from './components/ConfirmModals';
 import { ContrattoClienteModal } from './components/ContrattoClienteModal';
 import { ContrattoFornitoreModal } from './components/ContrattoFornitoreModal';
 import { CreateCommessaModal } from './components/CreateCommessaModal';
+import { CreateFornitoreModal } from './components/CreateFornitoreModal';
 import { DashboardView } from './components/DashboardView';
 import { DocProgettualeModal } from './components/DocProgettualeModal';
 import { FornitoreDocModal } from './components/FornitoreDocModal';
 import { FornituraModals } from './components/FornituraModals';
+import { ImportCommessaModal } from './components/ImportCommessaModal';
 import { JobProgressBar } from './components/JobProgressBar';
 import { PreviewModal } from './components/PreviewModal';
 import { TabContabilita } from './components/TabContabilita';
@@ -79,6 +81,7 @@ export default function App() {
 
       await Promise.all([
         documenti.fetchDocumenti(data.id),
+        documenti.fetchSubappaltatori(),
         forniture.fetchFornitureMateriali(data.id),
         forniture.fetchFornitureServizi(data.id),
         appalto.fetchAppaltoVoci(data.id),
@@ -195,6 +198,7 @@ export default function App() {
             onOpenDetail={fetchDetail}
             onPreviewDoc={(doc) => documenti.setPreviewDoc(doc)}
             onCreateCommessa={() => commesse.setShowCreateModal(true)}
+            onImportCommessa={() => commesse.setShowImportModal(true)}
             onDeleteFromHome={(c) => { commesse.setCommessaToDelete(c); commesse.setShowHomeDeleteModal(true); }}
             onUpdatePendingDocStato={handleUpdatePendingDocStato}
             page={commesse.page}
@@ -291,9 +295,15 @@ export default function App() {
                 onAddChildRow={appalto.handleAddAppaltoChildRow}
                 onUpdateRow={appalto.handleUpdateAppaltoRow}
                 onRemoveRow={appalto.handleRemoveAppaltoRow}
+                onRemoveRows={appalto.handleRemoveAppaltoRows}
+                onClearRows={appalto.handleClearAppaltoRows}
                 onToggleRow={appalto.toggleAppaltoRow}
                 onSave={appalto.handleSaveAppaltoRows}
                 onUpdateDataInizioLavori={commesse.handleUpdateDataInizioLavori}
+                onImportExcel={appalto.handleImportAppaltoExcel}
+                pendingExcelData={appalto.pendingExcelData}
+                onConfirmExcelMapping={appalto.handleConfirmExcelMapping}
+                onCancelExcelMapping={appalto.handleCancelExcelMapping}
               />
             )}
 
@@ -312,6 +322,7 @@ export default function App() {
                 onAllegatiClienteUpload={documenti.handleAllegatiClienteUpload}
                 onAllegatiFornitoreUpload={documenti.handleAllegatiFornitoreUpload}
                 onReplaceVarianteFile={documenti.handleReplaceVarianteFile}
+                onCreateFornitore={() => documenti.setShowCreateFornitoreModal(true)}
               />
             )}
 
@@ -349,6 +360,33 @@ export default function App() {
         setPmMode={commesse.setPmMode}
         onClose={commesse.handleCloseCreateModal}
         onSubmit={commesse.handleCreateCommessa}
+      />
+      <ImportCommessaModal
+        isOpen={commesse.showImportModal}
+        success={commesse.importSuccess}
+        submitting={commesse.importSubmitting}
+        formData={commesse.importFormData}
+        setFormData={commesse.setImportFormData}
+        onClose={() => commesse.setShowImportModal(false)}
+        onSubmit={commesse.handleImportCommessa}
+        pmFolders={commesse.importPmFolders}
+        importDocMode={commesse.importDocMode}
+        setImportDocMode={commesse.setImportDocMode}
+        selectedPmFolder={commesse.importSelectedFolder}
+        onSelectPmFolder={commesse.handleSelectImportFolder}
+        pmFolderFiles={commesse.importFolderFiles}
+        selectedFileNames={commesse.importSelectedFileNames}
+        toggleFileName={commesse.toggleImportFileName}
+        localFiles={commesse.importLocalFiles}
+        onLocalFilesChange={commesse.setImportLocalFiles}
+        loadingFolderFiles={commesse.loadingFolderFiles}
+      />
+      <CreateFornitoreModal
+        isOpen={documenti.showCreateFornitoreModal}
+        success={documenti.createFornitoreSuccess}
+        submitting={documenti.createFornitoreSubmitting}
+        onClose={() => documenti.setShowCreateFornitoreModal(false)}
+        onSubmit={documenti.handleCreateFornitore}
       />
 
       <ConfirmModals

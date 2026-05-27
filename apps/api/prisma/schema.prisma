@@ -160,6 +160,7 @@ model Commessa {
   fatture              Fattura[]
   documenti            Documento[]
   scadenzeDocSicurezza DocumentoSicurezza[]
+  appaltoVoci          AppaltoVoce[]
 
   @@index([stato])
   @@index([responsabile])
@@ -480,6 +481,32 @@ model Documento {
   @@index([entitaTipo, entitaId])
   @@index([commessaId])
   @@map("documenti")
+}
+
+// -----------------------------------------------------------------------------
+// APPALTO VOCI
+// -----------------------------------------------------------------------------
+
+model AppaltoVoce {
+  id                 String   @id @default(cuid())
+  commessaId         String   @map("commessa_id")
+  parentId           String?  @map("parent_id")
+  descrizione        String   @default("")
+  unitaMisura        String   @default("") @map("unita_misura")
+  quantita           Float    @default(0)
+  prezzoUnitario     Float    @default(0) @map("prezzo_unitario")
+  avanzamentoPercent Float    @default(0) @map("avanzamento_percent")
+  costoPrevisto      Float    @default(0) @map("costo_previsto")
+  costoEffettivo     Float    @default(0) @map("costo_effettivo")
+  ricavoPrevisto     Float    @default(0) @map("ricavo_previsto")
+  ricavoEffettivo    Float    @default(0) @map("ricavo_effettivo")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  commessa Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+
+  @@index([commessaId])
+  @@map("appalto_voci")
 }
 
 // -----------------------------------------------------------------------------

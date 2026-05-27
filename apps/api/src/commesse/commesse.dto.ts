@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { StatoCommessa, TipoOpera } from '@prisma/client';
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsArray, IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class CreateCommessaDto {
   @ApiProperty({ example: 'CME-2026-001', description: 'Codice univoco commessa' })
@@ -90,5 +91,27 @@ export class UpdateCommessaDto {
   @ApiPropertyOptional() @IsOptional() @IsDateString() dataFinePrevista?: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() dataFineEffettiva?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() note?: string;
+}
+
+export class UpsertAppaltoVoceDto {
+  @ApiProperty() @IsString() @IsNotEmpty() id!: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() parentId?: string | null;
+  @ApiProperty() @IsString() descrizione!: string;
+  @ApiProperty() @IsString() unitaMisura!: string;
+  @ApiProperty() @IsNumber() quantita!: number;
+  @ApiProperty() @IsNumber() prezzoUnitario!: number;
+  @ApiProperty() @IsNumber() avanzamentoPercent!: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() costoPrevisto?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() costoEffettivo?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() ricavoPrevisto?: number;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() ricavoEffettivo?: number;
+}
+
+export class ReplaceAppaltoVociDto {
+  @ApiProperty({ type: [UpsertAppaltoVoceDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpsertAppaltoVoceDto)
+  voci!: UpsertAppaltoVoceDto[];
 }
 

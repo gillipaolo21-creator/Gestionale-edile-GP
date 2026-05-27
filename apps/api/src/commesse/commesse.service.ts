@@ -1,7 +1,8 @@
-import { Commessa, Prisma, StatoCommessa, TipoOpera } from '@prisma/client';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Commessa, Prisma, StatoCommessa, TipoOpera } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateCommessaDto, UpdateCommessaDto } from './commesse.dto';
+import { CreateCommessaDto, UpdateCommessaDto, UpsertAppaltoVoceDto } from './commesse.dto';
 
 @Injectable()
 export class CommesseService {
@@ -175,6 +176,45 @@ export class CommesseService {
         : 0;
 
     return { totaleCommesse: commesse.length, commessePerStato, totaleImporti, totaleBudget, avanzamentoMedio };
+  }
+
+  async getAppaltoVoci(commessaId: string) {
+    return this.prisma.appaltoVoce.findMany({
+      where: { commessaId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async replaceAppaltoVoci(commessaId: string, rows: UpsertAppaltoVoceDto[]) {
+    const idMap = new Map<string, string>();
+    for (const row of rows) {
+      idMap.set(row.id, randomUUID());
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.appaltoVoce.deleteMany({ where: { commessaId } }),
+      this.prisma.appaltoVoce.createMany({
+        data: rows.map((row) => ({
+          id: idMap.get(row.id)!,
+          commessaId,
+          parentId: row.parentId ? (idMap.get(row.parentId) ?? null) : null,
+          descrizione: row.descrizione,
+          unitaMisura: row.unitaMisura,
+          quantita: row.quantita,
+          prezzoUnitario: row.prezzoUnitario,
+          avanzamentoPercent: row.avanzamentoPercent,
+          costoPrevisto: row.costoPrevisto ?? 0,
+          costoEffettivo: row.costoEffettivo ?? 0,
+          ricavoPrevisto: row.ricavoPrevisto ?? 0,
+          ricavoEffettivo: row.ricavoEffettivo ?? 0,
+        })),
+      }),
+    ]);
+
+    return this.prisma.appaltoVoce.findMany({
+      where: { commessaId },
+      orderBy: { createdAt: 'asc' },
+    });
   }
 }
 

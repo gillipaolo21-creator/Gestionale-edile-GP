@@ -1,5 +1,5 @@
 ﻿'use client';
-import { ChevronDown, Download, Eye, FileText, FolderOpen, RefreshCw, UploadCloud } from 'lucide-react';
+import { Building2, ChevronDown, Download, Eye, FileText, FolderOpen, RefreshCw, UploadCloud } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { Documento, DocumentoMetadata } from '../types/domain';
 import { AllegatiClienteModal } from './AllegatiClienteModal';
@@ -25,6 +25,7 @@ interface TabDocumentiProps {
   onAllegatiClienteUpload: (files: FileList, nomeCliente: string, descrizione?: string) => void;
   onAllegatiFornitoreUpload: (files: FileList, ragioneSociale: string, descrizione?: string) => void;
   onReplaceVarianteFile: (documentoId: string, file: File) => void;
+  onCreateFornitore: () => void;
 }
 
 function DocumentUploadCard({ title, description, category, onOpen }: { title: string; description: string; category: string; onOpen: () => void }) {
@@ -65,6 +66,7 @@ export function TabDocumenti({
   onAllegatiClienteUpload,
   onAllegatiFornitoreUpload,
   onReplaceVarianteFile,
+  onCreateFornitore,
 }: TabDocumentiProps) {
   const [expandedVariantiIds, setExpandedVariantiIds] = useState<Set<string>>(new Set());
   const [contrattoClienteOpen, setContrattoClienteOpen] = useState(true);
@@ -188,12 +190,37 @@ export function TabDocumenti({
           description="Contratto d'appalto, allegati firmati, varianti contrattuali."
           onOpen={onOpenContrattoCliente}
         />
-        <DocumentUploadCard
-          title="Contratti Fornitori"
-          category="Area Acquisti"
-          description="Accordi quadro, contratti di subappalto, condizioni di fornitura."
-          onOpen={() => onOpenContrattoFornitore()}
-        />
+
+        {/* Card Contratti Fornitori con doppia azione */}
+        <div className="bg-gray-100 p-5 rounded-2xl border border-slate-300 shadow-xl shadow-slate-300/50 group hover:border-[#4B6E48]/30 transition-all flex flex-col h-full">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-9 h-9 bg-blue-50 text-[#4B6E48] rounded-xl flex items-center justify-center flex-shrink-0">
+              <FolderOpen size={16} strokeWidth={2} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-[#4B6E48]">Contratti Fornitori</h4>
+              <span className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Area Acquisti</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-600 mb-4 flex-1">Accordi quadro, contratti di subappalto, condizioni di fornitura.</p>
+          <div className="flex flex-col gap-2">
+            <div
+              onClick={() => onOpenContrattoFornitore()}
+              className="border border-dashed border-gray-300 rounded-xl p-3 flex items-center justify-center gap-2 transition-colors hover:bg-gray-50 hover:border-[#4B6E48]/50 cursor-pointer"
+            >
+              <UploadCloud size={14} className="text-gray-600" />
+              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Carica Documento</span>
+            </div>
+            <div
+              onClick={onCreateFornitore}
+              className="border border-[#B2AC88] rounded-xl p-3 flex items-center justify-center gap-2 transition-colors hover:bg-[#B2AC88]/10 hover:border-[#4B6E48]/50 cursor-pointer"
+            >
+              <Building2 size={14} className="text-[#4B6E48]" />
+              <span className="text-[10px] font-bold text-[#4B6E48] uppercase tracking-widest">Crea Fornitore</span>
+            </div>
+          </div>
+        </div>
+
         <DocumentUploadCard
           title="Documentazione Progettuale"
           category="Area Tecnica"

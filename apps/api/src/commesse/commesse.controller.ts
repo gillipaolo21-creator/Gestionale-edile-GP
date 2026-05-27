@@ -1,4 +1,3 @@
-import { Commessa, StatoCommessa, TipoOpera } from '@prisma/client';
 import {
     Body,
     Controller,
@@ -9,17 +8,19 @@ import {
     Param,
     Patch,
     Post,
+    Put,
     Query,
     UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Commessa, StatoCommessa, TipoOpera } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { CreateCommessaDto, UpdateCommessaDto } from './commesse.dto';
-import { CommesseService } from './commesse.service';
-import { SalService } from '../sal.service';
+import { CreateFatturaNestedDto, UpdateFatturaDto } from '../fatture.dto';
 import { FattureService } from '../fatture.service';
 import { CreateSalNestedDto, UpdateSalDto } from '../sal.dto';
-import { CreateFatturaNestedDto, UpdateFatturaDto } from '../fatture.dto';
+import { SalService } from '../sal.service';
+import { CreateCommessaDto, ReplaceAppaltoVociDto, UpdateCommessaDto } from './commesse.dto';
+import { CommesseService } from './commesse.service';
 
 type PaginationQuery = { page?: string; limit?: string };
 
@@ -100,6 +101,18 @@ export class CommesseController {
   @Patch(':id/fatture/:fatturaId')
   async updateFattura(@Param('fatturaId') fatturaId: string, @Body() dto: UpdateFatturaDto) {
     return this.fattureService.update(fatturaId, dto);
+  }
+
+  // ─── Appalto Voci ─────────────────────────────────────────────────────────
+
+  @Get(':id/appalto-voci')
+  async getAppaltoVoci(@Param('id') id: string) {
+    return this.commesseService.getAppaltoVoci(id);
+  }
+
+  @Put(':id/appalto-voci')
+  async replaceAppaltoVoci(@Param('id') id: string, @Body() dto: ReplaceAppaltoVociDto) {
+    return this.commesseService.replaceAppaltoVoci(id, dto.voci);
   }
 
   // ─── Single commessa CRUD ─────────────────────────────────────────────────

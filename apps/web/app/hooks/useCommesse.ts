@@ -1,7 +1,25 @@
 ﻿'use client';
 import React, { useEffect, useMemo, useState } from 'react';
-import { apiFetch } from './apiFetch';
+import type { ImportDocMode, ImportFormData } from '../components/ImportCommessaModal';
 import type { ActiveTab, Commessa, Fattura } from '../types/domain';
+import { apiFetch } from './apiFetch';
+
+const defaultImportFormData = (): ImportFormData => ({
+  codiceIdentificativo: '',
+  nomeCliente: '',
+  tipoOpera: '',
+  indirizzo: '',
+  citta: '',
+  cap: '',
+  provincia: '',
+  responsabile: '',
+  importoContratto: '',
+  importoLavoriPropri: '',
+  dataInizio: new Date().toISOString().split('T')[0],
+  dataFinePrevista: '',
+  stato: 'IN_CORSO',
+  note: '',
+});
 
 type FormData = {
   codiceIdentificativo: string;
@@ -54,9 +72,23 @@ export function useCommesse(
   const [isDeleting, setIsDeleting] = useState(false);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showHomeDeleteModal, setShowHomeDeleteModal] = useState(false);
+
+  const [importFormData, setImportFormData] = useState<ImportFormData>(defaultImportFormData());
+  const [importSuccess, setImportSuccess] = useState(false);
+  const [importSubmitting, setImportSubmitting] = useState(false);
+
+  // Selezione documenti durante import
+  const [importDocMode, setImportDocMode] = useState<ImportDocMode>('none');
+  const [importPmFolders, setImportPmFolders] = useState<string[]>([]);
+  const [importSelectedFolder, setImportSelectedFolder] = useState('');
+  const [importFolderFiles, setImportFolderFiles] = useState<{ name: string; size: number }[]>([]);
+  const [importSelectedFileNames, setImportSelectedFileNames] = useState<Set<string>>(new Set());
+  const [importLocalFiles, setImportLocalFiles] = useState<File[]>([]);
+  const [loadingFolderFiles, setLoadingFolderFiles] = useState(false);
 
   // Stats aggregate dal server (tutti i record, non solo la pagina corrente)
   const [apiStats, setApiStats] = useState<{ totaleCommesse: number; costiCommesse: number; avanzamento: string } | null>(null);
@@ -99,9 +131,9 @@ export function useCommesse(
 
   const fetchStats = async () => {
     try {
-      const data = await apiFetch<{ totaleImporti: number; totaleBudget: number; avanzamentoMedio: number }>(`${baseUrl}/api/commesse/stats`);
+      const data = await apiFetch<{ totaleCommesse: number; totaleImporti: number; totaleBudget: number; avanzamentoMedio: number }>(`${baseUrl}/api/commesse/stats`);
       setApiStats({
-        totaleCommesse: data.totaleImporti ?? 0,
+        totaleCommesse: data.totaleCommesse ?? 0,
         costiCommesse: data.totaleBudget ?? 0,
         avanzamento: (data.avanzamentoMedio ?? 0).toFixed(1),
       });
@@ -148,6 +180,39 @@ export function useCommesse(
   }, [showCreateModal, suggestNextCode, baseUrl, formData.codiceIdentificativo]);
 
   useEffect(() => {
+    if (showImportModal) {
+      apiFetch<string[]>(`${baseUrl}/api/documenti/pm-folders`)
+        .then((data) => setImportPmFolders(data ?? []))
+        .catch(() => setImportPmFolders([]));
+    }
+  }, [showImportModal, baseUrl]);
+
+  const handleSelectImportFolder = async (folder: string) => {
+    setImportSelectedFolder(folder);
+    setImportSelectedFileNames(new Set());
+    if (!folder) { setImportFolderFiles([]); return; }
+    setLoadingFolderFiles(true);
+    try {
+      const files = await apiFetch<{ name: string; size: number }[]>(
+        `${baseUrl}/api/documenti/pm-folders/${encodeURIComponent(folder)}/files`,
+      );
+      setImportFolderFiles(files ?? []);
+    } catch {
+      setImportFolderFiles([]);
+    } finally {
+      setLoadingFolderFiles(false);
+    }
+  };
+
+  const toggleImportFileName = (name: string) => {
+    setImportSelectedFileNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
+
+  useEffect(() => {
     fetchCommesse(1);
     fetchStats();
   }, [baseUrl]);
@@ -189,6 +254,76 @@ export function useCommesse(
     setPmMode('select');
     setPmFolders([]);
     setFormData(defaultFormData());
+  };
+
+  const handleImportCommessa = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setImportSubmitting(true);
+    try {
+      const newCommessa = await apiFetch<{ id: string }>(`${baseUrl}/api/commesse`, {
+        method: 'POST',
+        body: JSON.stringify({
+          codiceIdentificativo: importFormData.codiceIdentificativo,
+          nomeCliente: importFormData.nomeCliente,
+          committente: importFormData.nomeCliente,
+          nomeCantiere: `${importFormData.codiceIdentificativo} - ${importFormData.citta || importFormData.indirizzo}`,
+          tipoOpera: importFormData.tipoOpera || undefined,
+          indirizzo: importFormData.indirizzo,
+          citta: importFormData.citta,
+          cap: importFormData.cap,
+          provincia: importFormData.provincia,
+          responsabile: importFormData.responsabile,
+          importoContratto: importFormData.importoContratto ? Number(importFormData.importoContratto) : undefined,
+          importoLavoriPropri: importFormData.importoLavoriPropri ? Number(importFormData.importoLavoriPropri) : undefined,
+          dataInizio: importFormData.dataInizio || undefined,
+          dataFinePrevista: importFormData.dataFinePrevista || undefined,
+          stato: importFormData.stato,
+          note: importFormData.note || undefined,
+        }),
+      });
+
+      // Import documenti dalla cartella server
+      if (importDocMode === 'server' && importSelectedFolder && importSelectedFileNames.size > 0) {
+        await apiFetch(`${baseUrl}/api/documenti/pm-folders/${encodeURIComponent(importSelectedFolder)}/import`, {
+          method: 'POST',
+          body: JSON.stringify({
+            commessaId: newCommessa.id,
+            fileNames: Array.from(importSelectedFileNames),
+            categoria: 'Documentazione Progettuale',
+          }),
+        });
+      }
+
+      // Import documenti locali
+      if (importDocMode === 'local' && importLocalFiles.length > 0) {
+        for (const file of importLocalFiles) {
+          const payload = new FormData();
+          payload.append('file', file);
+          payload.append('entitaTipo', 'COMMESSA');
+          payload.append('entitaId', newCommessa.id);
+          payload.append('categoria', 'Documentazione Progettuale');
+          await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+        }
+      }
+
+      setImportSuccess(true);
+      setTimeout(() => {
+        setImportSuccess(false);
+        setShowImportModal(false);
+        setImportFormData(defaultImportFormData());
+        setImportDocMode('none');
+        setImportSelectedFolder('');
+        setImportFolderFiles([]);
+        setImportSelectedFileNames(new Set());
+        setImportLocalFiles([]);
+        fetchCommesse(1);
+        fetchStats();
+      }, 1500);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Errore durante l\'importazione della commessa');
+    } finally {
+      setImportSubmitting(false);
+    }
   };
 
   const handleCloseCommessa = async () => {
@@ -290,6 +425,19 @@ export function useCommesse(
     isClosing,
     isDeleting,
     showCreateModal, setShowCreateModal,
+    showImportModal, setShowImportModal,
+    importFormData, setImportFormData,
+    importSuccess,
+    importSubmitting,
+    importDocMode, setImportDocMode,
+    importPmFolders,
+    importSelectedFolder,
+    importFolderFiles,
+    importSelectedFileNames,
+    importLocalFiles, setImportLocalFiles,
+    loadingFolderFiles,
+    handleSelectImportFolder,
+    toggleImportFileName,
     showCloseModal, setShowCloseModal,
     showDeleteModal, setShowDeleteModal,
     showHomeDeleteModal, setShowHomeDeleteModal,
@@ -297,6 +445,7 @@ export function useCommesse(
     fetchDeleteInfo,
     handleCreateCommessa,
     handleCloseCreateModal,
+    handleImportCommessa,
     handleCloseCommessa,
     handleDeleteCommessa,
     handleDeleteFromHome,

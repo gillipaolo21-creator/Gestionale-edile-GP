@@ -122,29 +122,52 @@ export class DocumentiService implements OnModuleInit {
   }
 
   async exportCommessaZip(commessaId: string): Promise<{ stream: NodeJS.ReadableStream; filename: string }> {
-    const docs = await this.prisma.documento.findMany({ where: { commessaId } });
+    const commessa = await this.prisma.commessa.findUnique({ where: { id: commessaId } });
+    if (!commessa) {
+      throw new NotFoundException(`Commessa ${commessaId} non trovata`);
+    }
+
+    const docs = await this.prisma.documento.findMany({
+      where: {
+        OR: [
+          { commessaId },
+          { entitaTipo: TipoEntitaDocumento.COMMESSA, entitaId: commessaId },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+    });
     const { Readable } = await import('node:stream');
 
-    if (docs.length === 0) {
-      const empty = new Readable({ read() { this.push(null); } });
-      return { stream: empty, filename: `commessa_${commessaId}.zip` };
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const JSZip = require('jszip');
+    const zip = new JSZip();
+
+    const usedNames = new Map<string, number>();
+
+    for (const doc of docs) {
+      const rawPath = doc.storageUrl.startsWith('file://') ? doc.storageUrl.replace('file://', '') : doc.storageUrl;
+      const resolvedPath = path.normalize(rawPath);
+
+      try {
+        const content = await fs.readFile(resolvedPath);
+        const currentCount = usedNames.get(doc.nomeFile) ?? 0;
+        usedNames.set(doc.nomeFile, currentCount + 1);
+
+        const fileName = currentCount === 0
+          ? doc.nomeFile
+          : `${path.parse(doc.nomeFile).name} (${currentCount})${path.parse(doc.nomeFile).ext}`;
+
+        zip.file(fileName, content);
+      } catch {
+        this.logger.warn(`[ZIP EXPORT] File non trovato su disco: ${resolvedPath}`);
+      }
     }
 
-    // Concatenate files as a simple flat stream (no zip, placeholder)
-    const filePaths = await Promise.all(
-      docs.map(async (d) => {
-        try { await fs.access(d.storageUrl); return d.storageUrl; } catch { return null; }
-      }),
-    );
-    const valid = filePaths.filter((p): p is string => Boolean(p));
-    if (valid.length === 0) {
-      const empty = new Readable({ read() { this.push(null); } });
-      return { stream: empty, filename: `commessa_${commessaId}.zip` };
-    }
+    const buffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+    const stream = Readable.from(buffer);
+    const codice = this.sanitize(commessa.codiceIdentificativo || commessaId);
 
-    // Return first file as-is when only one, otherwise return empty (archiver not installed)
-    const stream = createReadStream(valid[0]);
-    return { stream, filename: docs[0].nomeFile };
+    return { stream, filename: `commessa_${codice}.zip` };
   }
 
   async listPmFolders(): Promise<string[]> {
@@ -154,6 +177,83 @@ export class DocumentiService implements OnModuleInit {
     } catch {
       return [];
     }
+  }
+
+  async listFilesInPmFolder(folderName: string): Promise<{ name: string; size: number }[]> {
+    const folderPath = path.join(this.storageBasePath, this.sanitize(folderName));
+    try {
+      const entries = await fs.readdir(folderPath, { withFileTypes: true });
+      const files = entries.filter((e) => e.isFile());
+      return Promise.all(
+        files.map(async (f) => {
+          const stat = await fs.stat(path.join(folderPath, f.name));
+          return { name: f.name, size: stat.size };
+        }),
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  async importFromPmFolder(
+    folderName: string,
+    fileNames: string[],
+    commessaId: string,
+    categoria: string,
+  ): Promise<Documento[]> {
+    const folderPath = path.join(this.storageBasePath, this.sanitize(folderName));
+    const commessa = await this.prisma.commessa.findUnique({ where: { id: commessaId } });
+    if (!commessa) throw new NotFoundException(`Commessa ${commessaId} non trovata`);
+
+    const mimeMap: Record<string, string> = {
+      '.pdf': 'application/pdf',
+      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.doc': 'application/msword',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      '.xls': 'application/vnd.ms-excel',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+      '.txt': 'text/plain',
+      '.zip': 'application/zip',
+      '.dwg': 'application/octet-stream',
+    };
+
+    const results: Documento[] = [];
+    for (const fileName of fileNames) {
+      const srcPath = path.join(folderPath, this.sanitize(fileName));
+      try {
+        const buffer = await fs.readFile(srcPath);
+        const hash = createHash('sha256').update(buffer).digest('hex');
+        const sanitizedName = this.sanitize(fileName);
+        const uniqueName = `${Date.now()}_${sanitizedName}`;
+        const subDir = path.join(this.storageBasePath, 'COMMESSA', commessaId, this.sanitize(categoria));
+        await fs.mkdir(subDir, { recursive: true });
+        const destPath = path.join(subDir, uniqueName);
+        await fs.writeFile(destPath, buffer);
+        const ext = path.extname(fileName).toLowerCase();
+        const doc = await this.prisma.documento.create({
+          data: {
+            entitaTipo: TipoEntitaDocumento.COMMESSA,
+            entitaId: commessaId,
+            nomeFile: sanitizedName,
+            storageUrl: destPath,
+            hashFile: hash,
+            categoria,
+            sottocategoria: null,
+            datiEstrattiJson: JSON.stringify({ importedFrom: folderName }),
+            mimeType: mimeMap[ext] ?? 'application/octet-stream',
+            dimensione: buffer.length,
+          },
+        });
+        results.push(doc);
+      } catch (err) {
+        this.logger.warn(`Impossibile importare file ${fileName}: ${err}`);
+      }
+    }
+    return results;
   }
 
   // OCR non supportato — metodo mantenuto per compatibilità controller
