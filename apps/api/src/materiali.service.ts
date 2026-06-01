@@ -24,6 +24,7 @@ export class MaterialiService {
     return this.prisma.materiale.create({
       data: {
         commessaId: dto.commessaId,
+        societaId: dto.societaId,
         fornitoreNome: dto.fornitoreNome ?? '',
         descrizione: dto.descrizione,
         unitaMisura: dto.unitaMisura ?? '',

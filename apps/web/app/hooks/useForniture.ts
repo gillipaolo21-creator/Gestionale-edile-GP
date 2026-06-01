@@ -1,9 +1,10 @@
 ﻿'use client';
-import React, { useState } from 'react';
-import { apiFetch } from './apiFetch';
+import React, { useEffect, useState } from 'react';
 import type { Commessa, FornituraRecord } from '../types/domain';
+import { apiFetch } from './apiFetch';
 
 type FornituraForm = {
+  societaId: string;
   fornitoreNome: string;
   importoFornitura: string;
   descrizione: string;
@@ -14,6 +15,7 @@ type FornituraForm = {
 export function useForniture(
   baseUrl: string,
   selectedCommessa: Commessa | null,
+  defaultSocietaId: string | null,
   setError: (msg: string | null) => void,
 ) {
   const [fornitureMateriali, setFornitureMateriali] = useState<FornituraRecord[]>([]);
@@ -21,6 +23,7 @@ export function useForniture(
 
   const [showMaterialModal, setShowMaterialModal] = useState(false);
   const [materialForm, setMaterialForm] = useState<FornituraForm>({
+    societaId: defaultSocietaId ?? '',
     fornitoreNome: '',
     importoFornitura: '',
     descrizione: '',
@@ -32,6 +35,7 @@ export function useForniture(
 
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [serviceForm, setServiceForm] = useState<FornituraForm>({
+    societaId: defaultSocietaId ?? '',
     fornitoreNome: '',
     importoFornitura: '',
     descrizione: '',
@@ -40,6 +44,15 @@ export function useForniture(
   });
   const [serviceFile, setServiceFile] = useState<File | null>(null);
   const [isSavingService, setIsSavingService] = useState(false);
+
+  useEffect(() => {
+    if (defaultSocietaId && !materialForm.societaId) {
+      setMaterialForm((prev) => ({ ...prev, societaId: defaultSocietaId }));
+    }
+    if (defaultSocietaId && !serviceForm.societaId) {
+      setServiceForm((prev) => ({ ...prev, societaId: defaultSocietaId }));
+    }
+  }, [defaultSocietaId, materialForm.societaId, serviceForm.societaId]);
 
   const fetchFornitureMateriali = async (commessaId: string) => {
     try {
@@ -65,6 +78,12 @@ export function useForniture(
     setIsSavingMaterial(true);
     setError(null);
 
+    if (!materialForm.societaId) {
+      setIsSavingMaterial(false);
+      setError('Seleziona la societa della fornitura.');
+      return;
+    }
+
     if (!materialFile) {
       setIsSavingMaterial(false);
       setError('Carica il preventivo della fornitura.');
@@ -76,6 +95,7 @@ export function useForniture(
         method: 'POST',
         body: JSON.stringify({
           commessaId: selectedCommessa.id,
+          societaId: materialForm.societaId,
           fornitoreNome: materialForm.fornitoreNome,
           descrizione: materialForm.descrizione || materialForm.fornitoreNome,
           quantita: 1,
@@ -100,6 +120,7 @@ export function useForniture(
 
       setShowMaterialModal(false);
       setMaterialForm({
+        societaId: materialForm.societaId,
         fornitoreNome: '',
         importoFornitura: '',
         descrizione: '',
@@ -121,6 +142,12 @@ export function useForniture(
     setIsSavingService(true);
     setError(null);
 
+    if (!serviceForm.societaId) {
+      setIsSavingService(false);
+      setError('Seleziona la societa del servizio.');
+      return;
+    }
+
     if (!serviceFile) {
       setIsSavingService(false);
       setError('Carica il preventivo del servizio.');
@@ -132,6 +159,7 @@ export function useForniture(
         method: 'POST',
         body: JSON.stringify({
           commessaId: selectedCommessa.id,
+          societaId: serviceForm.societaId,
           fornitoreNome: serviceForm.fornitoreNome,
           descrizione: serviceForm.descrizione || serviceForm.fornitoreNome,
           quantita: 1,
@@ -156,6 +184,7 @@ export function useForniture(
 
       setShowServiceModal(false);
       setServiceForm({
+        societaId: serviceForm.societaId,
         fornitoreNome: '',
         importoFornitura: '',
         descrizione: '',

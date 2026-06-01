@@ -1,6 +1,7 @@
 ﻿'use client';
-import { Building2, ChevronDown, Download, Eye, FileText, FolderOpen, RefreshCw, UploadCloud } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Building2, ChevronDown, Download, Eye, FileText, FolderOpen, RefreshCw, Trash2, UploadCloud } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { downloadDocumentoAutenticato } from '../hooks/documentiClient';
 import type { Documento, DocumentoMetadata } from '../types/domain';
 import { AllegatiClienteModal } from './AllegatiClienteModal';
 import { AllegatiFornitoreModal } from './AllegatiFornitoreModal';
@@ -25,10 +26,11 @@ interface TabDocumentiProps {
   onAllegatiClienteUpload: (files: FileList, nomeCliente: string, descrizione?: string) => void;
   onAllegatiFornitoreUpload: (files: FileList, ragioneSociale: string, descrizione?: string) => void;
   onReplaceVarianteFile: (documentoId: string, file: File) => void;
+  onDeleteDocumenti: (documentoIds: string[]) => Promise<void>;
   onCreateFornitore: () => void;
 }
 
-function DocumentUploadCard({ title, description, category, onOpen }: { title: string; description: string; category: string; onOpen: () => void }) {
+function DocumentUploadCard({ title, description, category, onOpen }: Readonly<{ title: string; description: string; category: string; onOpen: () => void }>) {
   return (
     <div className="bg-gray-100 p-5 rounded-2xl border border-slate-300 shadow-xl shadow-slate-300/50 group hover:border-[#4B6E48]/30 transition-all flex flex-col h-full">
       <div className="flex items-center gap-3 mb-3">
@@ -41,13 +43,14 @@ function DocumentUploadCard({ title, description, category, onOpen }: { title: s
         </div>
       </div>
       <p className="text-xs text-gray-600 mb-4 flex-1">{description}</p>
-      <div
+      <button
+        type="button"
         onClick={onOpen}
-        className="border border-dashed border-gray-300 rounded-xl p-3 flex items-center justify-center gap-2 transition-colors hover:bg-gray-50 hover:border-[#4B6E48]/50 cursor-pointer"
+        className="w-full border border-dashed border-gray-300 rounded-xl p-3 flex items-center justify-center gap-2 transition-colors hover:bg-gray-50 hover:border-[#4B6E48]/50 cursor-pointer"
       >
         <UploadCloud size={16} className="text-gray-600 group-hover:text-[#4B6E48]" />
         <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Carica documento</span>
-      </div>
+      </button>
     </div>
   );
 }
@@ -66,16 +69,19 @@ export function TabDocumenti({
   onAllegatiClienteUpload,
   onAllegatiFornitoreUpload,
   onReplaceVarianteFile,
+  onDeleteDocumenti,
   onCreateFornitore,
-}: TabDocumentiProps) {
+}: Readonly<TabDocumentiProps>) {
   const [expandedVariantiIds, setExpandedVariantiIds] = useState<Set<string>>(new Set());
-  const [contrattoClienteOpen, setContrattoClienteOpen] = useState(true);
   const [showAllegatiClienteModal, setShowAllegatiClienteModal] = useState(false);
   const [allegatiClienteList, setAllegatiClienteList] = useState<string[]>([]);
   const [showAllegatiFornitoreModal, setShowAllegatiFornitoreModal] = useState(false);
   const [allegatiFornitoreList, setAllegatiFornitoreList] = useState<string[]>([]);
   const [expandedFornitori, setExpandedFornitori] = useState<Set<string>>(new Set());
   const [expandedClienti, setExpandedClienti] = useState<Set<string>>(new Set());
+  const [selectedClienteIds, setSelectedClienteIds] = useState<Set<string>>(new Set());
+  const [selectedFornitoreIds, setSelectedFornitoreIds] = useState<Set<string>>(new Set());
+  const [selectedProgettualiIds, setSelectedProgettualiIds] = useState<Set<string>>(new Set());
 
   // ── Filtri ─────────────────────────────────────────────────────────────
   const [filterCategoria, setFilterCategoria] = useState<string>('');
@@ -85,6 +91,31 @@ export function TabDocumenti({
   // Ref per nascondere il file input di sostituzione file
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const [replacingDocId, setReplacingDocId] = useState<string | null>(null);
+
+  const NO_CLIENT_REFERENCE = 'Senza riferimento cliente';
+  const NO_FORNITORE_REFERENCE = 'Senza riferimento fornitore';
+
+  const getClienteReference = (doc: Documento): string => {
+    const nomeCliente = doc.datiEstrattiJson?.nomeCliente;
+    if (typeof nomeCliente === 'string' && nomeCliente.trim()) {
+      return nomeCliente.trim();
+    }
+    if (typeof doc.sottocategoria === 'string' && doc.sottocategoria.trim()) {
+      return doc.sottocategoria.trim();
+    }
+    return NO_CLIENT_REFERENCE;
+  };
+
+  const getFornitoreReference = (doc: Documento): string => {
+    const ragioneSociale = doc.datiEstrattiJson?.ragioneSociale;
+    if (typeof ragioneSociale === 'string' && ragioneSociale.trim()) {
+      return ragioneSociale.trim();
+    }
+    if (typeof doc.sottocategoria === 'string' && doc.sottocategoria.trim()) {
+      return doc.sottocategoria.trim();
+    }
+    return NO_FORNITORE_REFERENCE;
+  };
 
   const handleReplaceClick = (docId: string) => {
     setReplacingDocId(docId);
@@ -101,6 +132,132 @@ export function TabDocumenti({
     setReplacingDocId(null);
   };
 
+  const handleDownloadDocumento = async (docId: string, nomeFile: string) => {
+    try {
+      await downloadDocumentoAutenticato(baseUrl, docId, nomeFile);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Errore durante il download del documento');
+    }
+  };
+
+  const keepOnlyExistingIds = (prev: Set<string>, valid: Set<string>): Set<string> => {
+    const next = new Set<string>();
+    prev.forEach((id) => {
+      if (valid.has(id)) next.add(id);
+    });
+    return next;
+  };
+
+  const removeIdsFromSet = (prev: Set<string>, idsToRemove: string[]): Set<string> => {
+    if (idsToRemove.length === 0) return prev;
+    const next = new Set(prev);
+    idsToRemove.forEach((id) => {
+      next.delete(id);
+    });
+    return next;
+  };
+
+  const getSelectedIdsForDocs = (docs: Documento[], selectedIds: Set<string>): string[] => (
+    docs.filter((doc) => selectedIds.has(doc.id)).map((doc) => doc.id)
+  );
+
+  useEffect(() => {
+    const clienteIds = new Set(
+      documenti
+        .filter((doc) => doc.categoria === 'Contratti Cliente')
+        .map((doc) => doc.id),
+    );
+    const fornitoreIds = new Set(
+      documenti
+        .filter((doc) => doc.categoria === 'Contratti Fornitori')
+        .map((doc) => doc.id),
+    );
+    const progettualiIds = new Set(
+      documenti
+        .filter((doc) => doc.categoria === 'Documentazione Progettuale')
+        .map((doc) => doc.id),
+    );
+
+    setSelectedClienteIds((prev) => keepOnlyExistingIds(prev, clienteIds));
+    setSelectedFornitoreIds((prev) => keepOnlyExistingIds(prev, fornitoreIds));
+    setSelectedProgettualiIds((prev) => keepOnlyExistingIds(prev, progettualiIds));
+  }, [documenti]);
+
+  const toggleClienteSelection = (docId: string) => {
+    setSelectedClienteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(docId)) next.delete(docId);
+      else next.add(docId);
+      return next;
+    });
+  };
+
+  const selectAllCliente = (docs: Documento[]) => {
+    setSelectedClienteIds(new Set(docs.map((doc) => doc.id)));
+  };
+
+  const clearClienteSelection = () => {
+    setSelectedClienteIds(new Set());
+  };
+
+  const handleDeleteSelectedCliente = async (documentoIds: string[]) => {
+    const ids = Array.from(new Set(documentoIds));
+    if (ids.length === 0) return;
+    if (!confirm(`Eliminare ${ids.length} documento/i selezionato/i?`)) return;
+    await onDeleteDocumenti(ids);
+    setSelectedClienteIds((prev) => removeIdsFromSet(prev, ids));
+  };
+
+  const toggleFornitoreSelection = (docId: string) => {
+    setSelectedFornitoreIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(docId)) next.delete(docId);
+      else next.add(docId);
+      return next;
+    });
+  };
+
+  const selectAllFornitori = (docs: Documento[]) => {
+    setSelectedFornitoreIds(new Set(docs.map((doc) => doc.id)));
+  };
+
+  const clearFornitoriSelection = () => {
+    setSelectedFornitoreIds(new Set());
+  };
+
+  const handleDeleteSelectedFornitori = async (documentoIds: string[]) => {
+    const ids = Array.from(new Set(documentoIds));
+    if (ids.length === 0) return;
+    if (!confirm(`Eliminare ${ids.length} documento/i selezionato/i?`)) return;
+    await onDeleteDocumenti(ids);
+    setSelectedFornitoreIds((prev) => removeIdsFromSet(prev, ids));
+  };
+
+  const toggleProgettualeSelection = (docId: string) => {
+    setSelectedProgettualiIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(docId)) next.delete(docId);
+      else next.add(docId);
+      return next;
+    });
+  };
+
+  const selectAllProgettuali = (docs: Documento[]) => {
+    setSelectedProgettualiIds(new Set(docs.map((doc) => doc.id)));
+  };
+
+  const clearProgettualiSelection = () => {
+    setSelectedProgettualiIds(new Set());
+  };
+
+  const handleDeleteSelectedProgettuali = async (documentoIds: string[]) => {
+    const ids = Array.from(new Set(documentoIds));
+    if (ids.length === 0) return;
+    if (!confirm(`Eliminare ${ids.length} documento/i selezionato/i?`)) return;
+    await onDeleteDocumenti(ids);
+    setSelectedProgettualiIds((prev) => removeIdsFromSet(prev, ids));
+  };
+
   const MACRO_CATEGORIE = [
     { key: 'Contratti Cliente', label: 'Contratto Cliente' },
     { key: 'Contratti Fornitori', label: 'Contratti Fornitore' },
@@ -108,12 +265,14 @@ export function TabDocumenti({
   ];
 
   // Applica filtri per categoria e data
-  const filteredDocumenti = documenti.filter(doc => {
+  const isDocVisibleByFilters = (doc: Documento): boolean => {
     if (filterCategoria && doc.categoria !== filterCategoria) return false;
     if (filterDataDa && doc.createdAt && doc.createdAt < filterDataDa) return false;
     if (filterDataA && doc.createdAt && doc.createdAt > `${filterDataA}T23:59:59`) return false;
     return true;
-  });
+  };
+
+  const filteredDocumenti = documenti.filter(isDocVisibleByFilters);
 
   const categorized = new Map<string, Documento[]>();
   for (const doc of filteredDocumenti) {
@@ -125,8 +284,29 @@ export function TabDocumenti({
     }
   }
   const sections = MACRO_CATEGORIE
-    .map(m => ({ label: m.label, key: m.key, docs: categorized.get(m.key) ?? [] }))
-    .filter(s => s.docs.length > 0);
+    .map(m => ({ label: m.label, key: m.key, docs: categorized.get(m.key) ?? [] }));
+
+  useEffect(() => {
+    const visibleClienteIds = new Set(
+      documenti
+        .filter((doc) => doc.categoria === 'Contratti Cliente' && isDocVisibleByFilters(doc))
+        .map((doc) => doc.id),
+    );
+    const visibleFornitoreIds = new Set(
+      documenti
+        .filter((doc) => doc.categoria === 'Contratti Fornitori' && isDocVisibleByFilters(doc))
+        .map((doc) => doc.id),
+    );
+    const visibleProgettualiIds = new Set(
+      documenti
+        .filter((doc) => doc.categoria === 'Documentazione Progettuale' && isDocVisibleByFilters(doc))
+        .map((doc) => doc.id),
+    );
+
+    setSelectedClienteIds((prev) => keepOnlyExistingIds(prev, visibleClienteIds));
+    setSelectedFornitoreIds((prev) => keepOnlyExistingIds(prev, visibleFornitoreIds));
+    setSelectedProgettualiIds((prev) => keepOnlyExistingIds(prev, visibleProgettualiIds));
+  }, [documenti, filterCategoria, filterDataDa, filterDataA]);
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 space-y-6">
@@ -204,20 +384,22 @@ export function TabDocumenti({
           </div>
           <p className="text-xs text-gray-600 mb-4 flex-1">Accordi quadro, contratti di subappalto, condizioni di fornitura.</p>
           <div className="flex flex-col gap-2">
-            <div
+            <button
+              type="button"
               onClick={() => onOpenContrattoFornitore()}
-              className="border border-dashed border-gray-300 rounded-xl p-3 flex items-center justify-center gap-2 transition-colors hover:bg-gray-50 hover:border-[#4B6E48]/50 cursor-pointer"
+              className="w-full border border-dashed border-gray-300 rounded-xl p-3 flex items-center justify-center gap-2 transition-colors hover:bg-gray-50 hover:border-[#4B6E48]/50 cursor-pointer"
             >
               <UploadCloud size={14} className="text-gray-600" />
               <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Carica Documento</span>
-            </div>
-            <div
+            </button>
+            <button
+              type="button"
               onClick={onCreateFornitore}
-              className="border border-[#B2AC88] rounded-xl p-3 flex items-center justify-center gap-2 transition-colors hover:bg-[#B2AC88]/10 hover:border-[#4B6E48]/50 cursor-pointer"
+              className="w-full border border-[#B2AC88] rounded-xl p-3 flex items-center justify-center gap-2 transition-colors hover:bg-[#B2AC88]/10 hover:border-[#4B6E48]/50 cursor-pointer"
             >
               <Building2 size={14} className="text-[#4B6E48]" />
               <span className="text-[10px] font-bold text-[#4B6E48] uppercase tracking-widest">Crea Fornitore</span>
-            </div>
+            </button>
           </div>
         </div>
 
@@ -229,24 +411,23 @@ export function TabDocumenti({
         />
       </div>
 
-      {sections.length === 0 ? (
-        <div className="p-8 border border-dashed border-gray-300 rounded-2xl text-center text-gray-600 text-sm">
-          Nessun documento caricato. Usa le sezioni sopra per aggiungere file.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <h3 className="text-[10px] font-black text-[#4B6E48] uppercase tracking-widest">Archivio Cloud</h3>
-          {sections.map(section => {
+      <div className="space-y-4">
+        <h3 className="text-[10px] font-black text-[#4B6E48] uppercase tracking-widest">Archivio Cloud</h3>
+        {sections.map(section => {
             if (section.label === 'Contratto Cliente') {
               const nonVarianti = section.docs.filter((d) => d.datiEstrattiJson?.tipoDocumento !== 'Variante');
               const tutteVarianti = section.docs.filter((d) => d.datiEstrattiJson?.tipoDocumento === 'Variante');
-              const clientiNomi = [...new Set([
-                ...nonVarianti.map(d => d.datiEstrattiJson?.nomeCliente),
-                ...tutteVarianti.map(d => d.datiEstrattiJson?.nomeCliente),
-              ].filter(Boolean))] as string[];
+              const clientiNomi = Array.from(
+                new Set(
+                  [...nonVarianti, ...tutteVarianti].map((d) => getClienteReference(d)),
+                ),
+              ).sort((a, b) => a.localeCompare(b, 'it'));
+              const clientiPerIntegrazione = clientiNomi.filter((nome) => nome !== NO_CLIENT_REFERENCE);
               const bcForVariante = nonVarianti
                 .filter(d => d.datiEstrattiJson?.tipoDocumento !== 'Allegato')
-                .map((b) => ({ id: b.id, nomeCliente: b.datiEstrattiJson?.nomeCliente || b.nomeFile }));
+                .map((b) => ({ id: b.id, nomeCliente: getClienteReference(b) }));
+              const selectedClientVisibleIds = getSelectedIdsForDocs(section.docs, selectedClienteIds);
+              const allClientSelected = section.docs.length > 0 && selectedClientVisibleIds.length === section.docs.length;
 
               return (
                 <div key={section.label} className="bg-gray-100 border border-slate-300 rounded-2xl shadow-xl shadow-slate-300/50 overflow-hidden">
@@ -254,35 +435,54 @@ export function TabDocumenti({
                     <FolderOpen size={13} className="text-[#4B6E48]" />
                     <span className="text-[10px] font-black text-[#4B6E48] uppercase tracking-widest">{section.label}</span>
                     <span className="ml-auto text-[10px] font-bold text-gray-600">{section.docs.length} file</span>
+                    {section.docs.length > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => (allClientSelected ? clearClienteSelection() : selectAllCliente(section.docs))}
+                          className="ml-2 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[#4B6E48] border border-[#4B6E48]/30 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          {allClientSelected ? 'Deseleziona' : 'Seleziona tutti'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={selectedClientVisibleIds.length === 0}
+                          onClick={() => { void handleDeleteSelectedCliente(selectedClientVisibleIds); }}
+                          className="ml-1 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Elimina selezionati
+                        </button>
+                      </>
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); onOpenVariante(bcForVariante); }}
-                      className="ml-2 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[#4B6E48] border border-[#4B6E48]/30 rounded-lg hover:bg-blue-50 transition-colors"
+                      className="ml-1 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[#4B6E48] border border-[#4B6E48]/30 rounded-lg hover:bg-blue-50 transition-colors"
                     >+ Variante</button>
-                    {clientiNomi.length > 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setAllegatiClienteList(clientiNomi);
-                          setShowAllegatiClienteModal(true);
-                        }}
-                        className="ml-1 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
-                      >+ Documenti</button>
-                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAllegatiClienteList(clientiPerIntegrazione);
+                        setShowAllegatiClienteModal(true);
+                      }}
+                      className="ml-1 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
+                    >+ Integrazione</button>
                   </div>
 
                   {/* === SEZIONE DOCUMENTI === */}
                   <div className="border-b border-gray-300">
                     <div className="divide-y divide-stone-100">
                       {clientiNomi.map(clienteName => {
-                        const clienteDocs = nonVarianti.filter(d => d.datiEstrattiJson?.nomeCliente === clienteName);
-                        const clienteVarianti = tutteVarianti.filter(d => d.datiEstrattiJson?.nomeCliente === clienteName);
-                        const isOpen = expandedClienti.has(clienteName);
+                        const clienteDocs = nonVarianti.filter(d => getClienteReference(d) === clienteName);
+                        const clienteVarianti = tutteVarianti.filter(d => getClienteReference(d) === clienteName);
+                        const isOpen = !expandedClienti.has(clienteName);
                         const totalFiles = clienteDocs.length + clienteVarianti.length;
 
                         return (
                           <div key={clienteName}>
-                            <div
-                              className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer select-none"
+                            <button
+                              type="button"
+                              aria-expanded={isOpen}
+                              className="w-full text-left flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer select-none"
                               onClick={() => setExpandedClienti(prev => { const s = new Set(prev); s.has(clienteName) ? s.delete(clienteName) : s.add(clienteName); return s; })}
                             >
                               <div className="flex items-center gap-3 min-w-0">
@@ -296,14 +496,22 @@ export function TabDocumenti({
                                 )}
                               </div>
                               <ChevronDown size={14} className={`text-gray-600 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`} />
-                            </div>
+                            </button>
                             {isOpen && (
                               <div className="bg-gray-50/40 divide-y divide-stone-100">
                                 {clienteDocs.map(doc => {
                                   const meta: DocumentoMetadata = doc.datiEstrattiJson || {};
+                                  const isSelectedClienteDoc = selectedClienteIds.has(doc.id);
                                   return (
-                                    <div key={doc.id} className="flex items-center justify-between px-5 pl-16 py-2 hover:bg-gray-50 transition-colors">
+                                    <div key={doc.id} className={`flex items-center justify-between px-5 pl-16 py-2 transition-colors ${isSelectedClienteDoc ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
                                       <div className="flex items-center gap-3 min-w-0">
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelectedClienteDoc}
+                                          onChange={() => toggleClienteSelection(doc.id)}
+                                          className="w-4 h-4 rounded border-gray-300 text-[#4B6E48] focus:ring-[#4B6E48]"
+                                          aria-label={`Seleziona ${doc.nomeFile}`}
+                                        />
                                         <FileText size={14} className="text-gray-600 flex-shrink-0" />
                                         <div className="min-w-0">
                                           <p className="text-xs font-bold text-[#4B6E48] truncate">{doc.nomeFile}</p>
@@ -318,9 +526,14 @@ export function TabDocumenti({
                                         <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
                                           <Eye size={14} />
                                         </button>
-                                        <a href={`${baseUrl}/api/documenti/${doc.id}/download`} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors">
+                                        <button
+                                          type="button"
+                                          onClick={() => { void handleDownloadDocumento(doc.id, doc.nomeFile); }}
+                                          className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors"
+                                          title="Scarica"
+                                        >
                                           <Download size={14} />
-                                        </a>
+                                        </button>
                                       </div>
                                     </div>
                                   );
@@ -336,11 +549,12 @@ export function TabDocumenti({
                                       const vm: DocumentoMetadata = v.datiEstrattiJson || {};
                                       const importoV = Number(vm.importoVariante || 0);
                                       const isExpanded = expandedVariantiIds.has(v.id);
+                                      const isSelectedVariante = selectedClienteIds.has(v.id);
                                       const voci: VarianteVoce[] = (vm.voci as VarianteVoce[]) || [];
 
                                       return (
                                         <div key={v.id}>
-                                          <div className="flex items-center justify-between px-5 pl-16 py-2 hover:bg-gray-50/60 transition-colors">
+                                          <div className={`flex items-center justify-between px-5 pl-16 py-2 transition-colors ${isSelectedVariante ? 'bg-blue-50/50' : 'hover:bg-gray-50/60'}`}>
                                             <button
                                               type="button"
                                               onClick={() => setExpandedVariantiIds(prev => { const s = new Set(prev); s.has(v.id) ? s.delete(v.id) : s.add(v.id); return s; })}
@@ -360,6 +574,13 @@ export function TabDocumenti({
                                               </div>
                                             </button>
                                             <div className="flex items-center gap-1 flex-shrink-0">
+                                              <input
+                                                type="checkbox"
+                                                checked={isSelectedVariante}
+                                                onChange={() => toggleClienteSelection(v.id)}
+                                                className="w-4 h-4 rounded border-gray-300 text-[#4B6E48] focus:ring-[#4B6E48]"
+                                                aria-label={`Seleziona ${v.nomeFile}`}
+                                              />
                                               <button
                                                 type="button"
                                                 onClick={() => onEditVariante(v.id, {
@@ -383,9 +604,14 @@ export function TabDocumenti({
                                               <button type="button" onClick={() => setPreviewDoc({ id: v.id, nomeFile: v.nomeFile })} className="p-1.5 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
                                                 <Eye size={13} />
                                               </button>
-                                              <a href={`${baseUrl}/api/documenti/${v.id}/download`} target="_blank" rel="noopener noreferrer" className="p-1.5 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors">
+                                              <button
+                                                type="button"
+                                                onClick={() => { void handleDownloadDocumento(v.id, v.nomeFile); }}
+                                                className="p-1.5 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Scarica"
+                                              >
                                                 <Download size={13} />
-                                              </a>
+                                              </button>
                                               <button
                                                 type="button"
                                                 onClick={() => onDeleteVariante(v.id)}
@@ -449,7 +675,12 @@ export function TabDocumenti({
 
             // Contratti Fornitore section
             if (section.label === 'Contratti Fornitore') {
-              const fornitori = [...new Set(section.docs.map(d => d.datiEstrattiJson?.ragioneSociale).filter(Boolean))] as string[];
+              const fornitori = Array.from(
+                new Set(section.docs.map((d) => getFornitoreReference(d))),
+              ).sort((a, b) => a.localeCompare(b, 'it'));
+              const fornitoriPerIntegrazione = fornitori.filter((nome) => nome !== NO_FORNITORE_REFERENCE);
+              const selectedFornitoriVisibleIds = getSelectedIdsForDocs(section.docs, selectedFornitoreIds);
+              const allFornitoriSelected = section.docs.length > 0 && selectedFornitoriVisibleIds.length === section.docs.length;
 
               return (
                 <div key={section.label} className="bg-gray-100 border border-slate-300 rounded-2xl shadow-xl shadow-slate-300/50 overflow-hidden">
@@ -457,25 +688,46 @@ export function TabDocumenti({
                     <FolderOpen size={13} className="text-[#4B6E48]" />
                     <span className="text-[10px] font-black text-[#4B6E48] uppercase tracking-widest">{section.label}</span>
                     <span className="ml-auto text-[10px] font-bold text-gray-600">{section.docs.length} file</span>
+                    {section.docs.length > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => (allFornitoriSelected ? clearFornitoriSelection() : selectAllFornitori(section.docs))}
+                          className="ml-2 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[#4B6E48] border border-[#4B6E48]/30 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          {allFornitoriSelected ? 'Deseleziona' : 'Seleziona tutti'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={selectedFornitoriVisibleIds.length === 0}
+                          onClick={() => { void handleDeleteSelectedFornitori(selectedFornitoriVisibleIds); }}
+                          className="ml-1 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Elimina selezionati
+                        </button>
+                      </>
+                    )}
                     {fornitori.length > 0 && (
                       <button
                         onClick={() => {
-                          setAllegatiFornitoreList(fornitori);
+                          setAllegatiFornitoreList(fornitoriPerIntegrazione);
                           setShowAllegatiFornitoreModal(true);
                         }}
-                        className="ml-2 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
+                        className="ml-1 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-300 rounded-lg hover:bg-emerald-50 transition-colors"
                       >+ Documenti</button>
                     )}
                   </div>
 
                   <div className="divide-y divide-stone-100">
                     {fornitori.map(fornitore => {
-                      const fornitDocs = section.docs.filter(d => d.datiEstrattiJson?.ragioneSociale === fornitore);
-                      const isOpen = expandedFornitori.has(fornitore);
+                      const fornitDocs = section.docs.filter(d => getFornitoreReference(d) === fornitore);
+                      const isOpen = !expandedFornitori.has(fornitore);
                       return (
                         <div key={fornitore}>
-                          <div
-                            className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer select-none"
+                          <button
+                            type="button"
+                            aria-expanded={isOpen}
+                            className="w-full text-left flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer select-none"
                             onClick={() => setExpandedFornitori(prev => { const s = new Set(prev); s.has(fornitore) ? s.delete(fornitore) : s.add(fornitore); return s; })}
                           >
                             <div className="flex items-center gap-3 min-w-0">
@@ -486,42 +738,156 @@ export function TabDocumenti({
                               <span className="text-[10px] font-semibold text-gray-600">{fornitDocs.length} file</span>
                             </div>
                             <ChevronDown size={14} className={`text-gray-600 transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`} />
-                          </div>
+                          </button>
                           {isOpen && (
                             <div className="bg-gray-50/40 divide-y divide-stone-100">
-                              {fornitDocs.map(doc => (
-                                <div key={doc.id} className="flex items-center justify-between px-5 pl-16 py-2 hover:bg-gray-50 transition-colors">
-                                  <div className="flex items-center gap-3 min-w-0">
-                                    <FileText size={14} className="text-gray-600 flex-shrink-0" />
-                                    <div className="min-w-0">
-                                      <p className="text-xs font-bold text-[#4B6E48] truncate">{doc.nomeFile}</p>
-                                      <div className="flex items-center gap-2 text-[10px] text-gray-600 mt-0.5">
-                                        {doc.datiEstrattiJson?.referente && <span>{doc.datiEstrattiJson.referente}</span>}
-                                        {doc.datiEstrattiJson?.dataContratto && <><span>&bull;</span><span>{new Date(doc.datiEstrattiJson.dataContratto).toLocaleDateString('it-IT')}</span></>}
+                              {fornitDocs.map(doc => {
+                                const isSelectedFornitoreDoc = selectedFornitoreIds.has(doc.id);
+                                return (
+                                  <div key={doc.id} className={`flex items-center justify-between px-5 pl-16 py-2 transition-colors ${isSelectedFornitoreDoc ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelectedFornitoreDoc}
+                                        onChange={() => toggleFornitoreSelection(doc.id)}
+                                        className="w-4 h-4 rounded border-gray-300 text-[#4B6E48] focus:ring-[#4B6E48]"
+                                        aria-label={`Seleziona ${doc.nomeFile}`}
+                                      />
+                                      <FileText size={14} className="text-gray-600 flex-shrink-0" />
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-bold text-[#4B6E48] truncate">{doc.nomeFile}</p>
+                                        <div className="flex items-center gap-2 text-[10px] text-gray-600 mt-0.5">
+                                          {doc.datiEstrattiJson?.referente && <span>{doc.datiEstrattiJson.referente}</span>}
+                                          {doc.datiEstrattiJson?.dataContratto && <><span>&bull;</span><span>{new Date(doc.datiEstrattiJson.dataContratto).toLocaleDateString('it-IT')}</span></>}
+                                        </div>
                                       </div>
                                     </div>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
+                                        <Eye size={14} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => { void handleDownloadDocumento(doc.id, doc.nomeFile); }}
+                                        className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Scarica"
+                                      >
+                                        <Download size={14} />
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
-                                      <Eye size={14} />
-                                    </button>
-                                    <a href={`${baseUrl}/api/documenti/${doc.id}/download`} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors">
-                                      <Download size={14} />
-                                    </a>
-                                  </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>
                       );
                     })}
+                    {fornitori.length === 0 && (
+                      <div className="px-5 py-4 text-center text-xs text-gray-600">Nessun documento caricato.</div>
+                    )}
                   </div>
                 </div>
               );
             }
 
-            // Generic section
+            // Documentazione progettuale section
+            if (section.key === 'Documentazione Progettuale') {
+              const selectedProgettualiVisibleIds = getSelectedIdsForDocs(section.docs, selectedProgettualiIds);
+              const allSelected = section.docs.length > 0 && selectedProgettualiVisibleIds.length === section.docs.length;
+
+              return (
+                <div key={section.label} className="bg-gray-100 border border-gray-300 rounded-2xl shadow-xl shadow-slate-300/50 overflow-hidden">
+                  <div className="px-5 py-3 bg-gray-50 border-b border-stone-100 flex items-center gap-2">
+                    <FolderOpen size={13} className="text-[#4B6E48]" />
+                    <span className="text-[10px] font-black text-[#4B6E48] uppercase tracking-widest">{section.label}</span>
+                    <span className="ml-auto text-[10px] font-bold text-gray-600">{section.docs.length} file</span>
+                    {section.docs.length > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => (allSelected ? clearProgettualiSelection() : selectAllProgettuali(section.docs))}
+                          className="ml-2 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-[#4B6E48] border border-[#4B6E48]/30 rounded-lg hover:bg-blue-50 transition-colors"
+                        >
+                          {allSelected ? 'Deseleziona' : 'Seleziona tutti'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={selectedProgettualiVisibleIds.length === 0}
+                          onClick={() => { void handleDeleteSelectedProgettuali(selectedProgettualiVisibleIds); }}
+                          className="ml-1 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Elimina selezionati
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {section.docs.length === 0 ? (
+                    <div className="px-5 py-4 text-center text-xs text-gray-600">Nessun documento caricato.</div>
+                  ) : (
+                    <div className="divide-y divide-stone-100">
+                      {section.docs.map((doc) => {
+                        const meta: DocumentoMetadata = doc.datiEstrattiJson || {};
+                        const displayName = meta.nome || meta.nomeCliente || meta.ragioneSociale || doc.nomeFile;
+                        const isSelected = selectedProgettualiIds.has(doc.id);
+
+                        return (
+                          <div key={doc.id} className={`flex items-center justify-between px-5 py-3 transition-colors ${isSelected ? 'bg-blue-50/50' : 'hover:bg-gray-50'}`}>
+                            <div className="flex items-center gap-3 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => toggleProgettualeSelection(doc.id)}
+                                className="w-4 h-4 rounded border-gray-300 text-[#4B6E48] focus:ring-[#4B6E48]"
+                                aria-label={`Seleziona ${doc.nomeFile}`}
+                              />
+                              <div className="w-8 h-8 bg-slate-600/50 text-gray-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <FileText size={15} />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-[#4B6E48] truncate">{displayName}</p>
+                                <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-600 mt-0.5">
+                                  {meta.descrizione && <span className="truncate">{String(meta.descrizione)}</span>}
+                                  {meta.descrizione && <span>&bull;</span>}
+                                  <span className="truncate text-gray-800">{doc.nomeFile}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
+                                <Eye size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { void handleDownloadDocumento(doc.id, doc.nomeFile); }}
+                                className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Scarica"
+                              >
+                                <Download size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (!confirm('Eliminare il documento selezionato?')) return;
+                                  void onDeleteDocumenti([doc.id]);
+                                }}
+                                className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Elimina documento"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // Generic fallback section
             return (
               <div key={section.label} className="bg-gray-100 border border-gray-300 rounded-2xl shadow-xl shadow-slate-300/50 overflow-hidden">
                 <div className="px-5 py-3 bg-gray-50 border-b border-stone-100 flex items-center gap-2">
@@ -529,46 +895,54 @@ export function TabDocumenti({
                   <span className="text-[10px] font-black text-[#4B6E48] uppercase tracking-widest">{section.label}</span>
                   <span className="ml-auto text-[10px] font-bold text-gray-600">{section.docs.length} file</span>
                 </div>
-                <div className="divide-y divide-stone-100">
-                  {section.docs.map((doc) => {
-                    const meta: DocumentoMetadata = doc.datiEstrattiJson || {};
-                    const displayName = meta.nome || meta.nomeCliente || meta.ragioneSociale || doc.nomeFile;
-                    return (
-                      <div key={doc.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-8 h-8 bg-slate-600/50 text-gray-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <FileText size={15} />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold text-[#4B6E48] truncate">{displayName}</p>
-                            <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-600 mt-0.5">
-                              {meta.importoContratto && <span className="text-[#4B6E48] font-black">€ {Number(meta.importoContratto).toLocaleString('it-IT')}</span>}
-                              {meta.importoContratto && <span>&bull;</span>}
-                              {meta.dataContratto && <span>{new Date(meta.dataContratto).toLocaleDateString('it-IT')}</span>}
-                              {meta.dataContratto && <span>&bull;</span>}
-                              {meta.referente && <span>{meta.referente}</span>}
-                              {meta.referente && <span>&bull;</span>}
-                              <span className="truncate text-gray-800">{doc.nomeFile}</span>
+                {section.docs.length === 0 ? (
+                  <div className="px-5 py-4 text-center text-xs text-gray-600">Nessun documento caricato.</div>
+                ) : (
+                  <div className="divide-y divide-stone-100">
+                    {section.docs.map((doc) => {
+                      const meta: DocumentoMetadata = doc.datiEstrattiJson || {};
+                      const displayName = meta.nome || meta.nomeCliente || meta.ragioneSociale || doc.nomeFile;
+                      return (
+                        <div key={doc.id} className="flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-8 h-8 bg-slate-600/50 text-gray-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                              <FileText size={15} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-[#4B6E48] truncate">{displayName}</p>
+                              <div className="flex items-center gap-2 text-[10px] font-semibold text-gray-600 mt-0.5">
+                                {meta.importoContratto && <span className="text-[#4B6E48] font-black">€ {Number(meta.importoContratto).toLocaleString('it-IT')}</span>}
+                                {meta.importoContratto && <span>&bull;</span>}
+                                {meta.dataContratto && <span>{new Date(meta.dataContratto).toLocaleDateString('it-IT')}</span>}
+                                {meta.dataContratto && <span>&bull;</span>}
+                                {meta.referente && <span>{meta.referente}</span>}
+                                {meta.referente && <span>&bull;</span>}
+                                <span className="truncate text-gray-800">{doc.nomeFile}</span>
+                              </div>
                             </div>
                           </div>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { void handleDownloadDocumento(doc.id, doc.nomeFile); }}
+                              className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Scarica"
+                            >
+                              <Download size={16} />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
-                            <Eye size={16} />
-                          </button>
-                          <a href={`${baseUrl}/api/documenti/${doc.id}/download`} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors">
-                            <Download size={16} />
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
-          })}
-        </div>
-      )}
+        })}
+      </div>
 
       <AllegatiClienteModal
         isOpen={showAllegatiClienteModal}

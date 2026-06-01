@@ -2,13 +2,15 @@
 import { AlertCircle, CheckCircle2, Clock, CreditCard, Euro, FileText, PlusCircle, TrendingUp } from 'lucide-react';
 import React, { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import type { ApiFattura, ApiSal, StatoPagamento, TipoDocumentoFiscale } from '../types/api';
 import { apiFetch } from '../hooks/apiFetch';
+import type { ApiFattura, ApiSal, StatoPagamento, TipoDocumentoFiscale } from '../types/api';
+import { EuroAmountInput } from './EuroAmountInput';
 import { FatturaRowSkeleton, SalRowSkeleton } from './Skeleton';
 
 // ─── Sub-types ───────────────────────────────────────────────────────────────
 
 interface NewFatturaForm {
+  societaId: string;
   tipoDocumento: TipoDocumentoFiscale;
   importoImponibile: string;
   iva: string;
@@ -45,17 +47,20 @@ const SAL_STATE_LABELS: Record<string, { label: string; color: string }> = {
 interface TabContabilitaProps {
   commessaId: string;
   baseUrl: string;
+  societaOptions: { id: string; nome: string }[];
+  defaultSocietaId: string | null;
 }
 
-export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaProps>) {
+export function TabContabilita({ commessaId, baseUrl, societaOptions, defaultSocietaId }: Readonly<TabContabilitaProps>) {
   const [fatture, setFatture] = useState<ApiFattura[]>([]);
-  const [sals, setSals] = useState<ApiSal[]>([]);
+  const [salItems, setSalItems] = useState<ApiSal[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState<'fatture' | 'sal'>('sal');
   const [showFatturaForm, setShowFatturaForm] = useState(false);
   const [showSalForm, setShowSalForm] = useState(false);
   const [fatturaForm, setFatturaForm] = useState<NewFatturaForm>({
+    societaId: defaultSocietaId ?? '',
     tipoDocumento: 'FATTURA_ATTIVA',
     importoImponibile: '',
     iva: '22',
@@ -68,6 +73,12 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
     importoMaturato: '',
   });
 
+  useEffect(() => {
+    if (defaultSocietaId && !fatturaForm.societaId) {
+      setFatturaForm((prev) => ({ ...prev, societaId: defaultSocietaId }));
+    }
+  }, [defaultSocietaId, fatturaForm.societaId]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -76,7 +87,7 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
         apiFetch<ApiSal[]>(`${baseUrl}/api/commesse/${commessaId}/sal`),
       ]);
       setFatture(fRes ?? []);
-      setSals(sRes ?? []);
+      setSalItems(sRes ?? []);
     } catch {
       toast.error('Errore nel caricamento dati contabilità');
     } finally {
@@ -87,6 +98,10 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleAddFattura = async () => {
+    if (!fatturaForm.societaId) {
+      toast.error('Seleziona la societa');
+      return;
+    }
     if (!fatturaForm.importoImponibile || !fatturaForm.dataScadenza) {
       toast.error('Compila imponibile e data scadenza');
       return;
@@ -103,7 +118,7 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
         }),
       });
       setShowFatturaForm(false);
-      setFatturaForm({ tipoDocumento: 'FATTURA_ATTIVA', importoImponibile: '', iva: '22', dataScadenza: '', salId: '' });
+      setFatturaForm({ societaId: fatturaForm.societaId, tipoDocumento: 'FATTURA_ATTIVA', importoImponibile: '', iva: '22', dataScadenza: '', salId: '' });
       toast.success('Fattura registrata');
       await fetchData();
     } catch (e) {
@@ -157,7 +172,7 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
   const totalePagato = fatture
     .filter(f => f.statoPagamento === 'PAGATO')
     .reduce((s, f) => s + Number.parseFloat(f.importoImponibile), 0);
-  const ultimoSal = sals[0];
+  const ultimoSal = salItems[0];
   const avanzamento = ultimoSal ? Number.parseFloat(ultimoSal.percentualeCompletamento) : 0;
 
   // ─── Extracted render blocks (avoid nested ternaries) ────────────────────
@@ -168,7 +183,7 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
         {[1, 2, 3].map(i => <SalRowSkeleton key={i} />)}
       </div>
     );
-  } else if (sals.length === 0) {
+  } else if (salItems.length === 0) {
     salContent = (
       <div className="py-16 text-center text-gray-600">
         <TrendingUp size={32} strokeWidth={1} className="mx-auto mb-3 opacity-30" />
@@ -180,7 +195,7 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
       <div className="relative">
         <div className="absolute left-5 top-0 bottom-0 w-[2px] bg-slate-600/50" />
         <div className="space-y-4">
-          {sals.map((sal, idx) => {
+          {salItems.map((sal, idx) => {
             const meta = SAL_STATE_LABELS[sal.stato] ?? { label: sal.stato, color: 'bg-slate-600/50 text-gray-800' };
             return (
               <div key={sal.id} className="flex items-start gap-6 relative animate-in fade-in slide-in-from-left-2 duration-500">
@@ -303,7 +318,7 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
       {activeSection === 'sal' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-xs font-bold text-gray-600 uppercase tracking-widest">Timeline SAL ({sals.length})</p>
+            <p className="text-xs font-bold text-gray-600 uppercase tracking-widest">Timeline SAL ({salItems.length})</p>
             <button
               onClick={() => setShowSalForm(v => !v)}
               className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[#4B6E48] hover:opacity-70 transition-opacity"
@@ -328,8 +343,8 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
                 </div>
                 <div>
                   <label htmlFor="sal-importo" className="text-[9px] font-black uppercase tracking-widest text-gray-600 block mb-1">Importo Maturato (€)</label>
-                  <input id="sal-importo" type="number" value={salForm.importoMaturato} onChange={e => setSalForm(f => ({ ...f, importoMaturato: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#4B6E48] focus:outline-none focus:border-[#4B6E48]" placeholder="0.00" />
+                  <EuroAmountInput id="sal-importo" value={salForm.importoMaturato} onValueChange={(nextValue) => setSalForm(f => ({ ...f, importoMaturato: nextValue }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#4B6E48] focus:outline-none focus:border-[#4B6E48]" placeholder="0,00" />
                 </div>
               </div>
               <div className="flex gap-2 justify-end">
@@ -363,6 +378,20 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
               <p className="text-[9px] font-black text-[#4B6E48] uppercase tracking-widest">Nuova Fattura</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label htmlFor="fat-societa" className="text-[9px] font-black uppercase tracking-widest text-gray-600 block mb-1">Societa</label>
+                  <select
+                    id="fat-societa"
+                    value={fatturaForm.societaId}
+                    onChange={e => setFatturaForm(f => ({ ...f, societaId: e.target.value }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#4B6E48] focus:outline-none focus:border-[#4B6E48]"
+                  >
+                    <option value="">— Seleziona —</option>
+                    {societaOptions.map((s) => (
+                      <option key={s.id} value={s.id}>{s.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <label htmlFor="fat-tipo" className="text-[9px] font-black uppercase tracking-widest text-gray-600 block mb-1">Tipo</label>
                   <select id="fat-tipo" value={fatturaForm.tipoDocumento} onChange={e => setFatturaForm(f => ({ ...f, tipoDocumento: e.target.value as TipoDocumentoFiscale }))}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#4B6E48] focus:outline-none focus:border-[#4B6E48]">
@@ -374,13 +403,13 @@ export function TabContabilita({ commessaId, baseUrl }: Readonly<TabContabilitaP
                   <select id="fat-sal" value={fatturaForm.salId} onChange={e => setFatturaForm(f => ({ ...f, salId: e.target.value }))}
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#4B6E48] focus:outline-none focus:border-[#4B6E48]">
                     <option value="">— Nessuno —</option>
-                    {sals.map(s => <option key={s.id} value={s.id}>SAL n.{s.progressivo} ({new Date(s.dataCertificazione).toLocaleDateString('it-IT')})</option>)}
+                    {salItems.map(s => <option key={s.id} value={s.id}>SAL n.{s.progressivo} ({new Date(s.dataCertificazione).toLocaleDateString('it-IT')})</option>)}
                   </select>
                 </div>
                 <div>
                   <label htmlFor="fat-importo" className="text-[9px] font-black uppercase tracking-widest text-gray-600 block mb-1">Imponibile (€)</label>
-                  <input id="fat-importo" type="number" value={fatturaForm.importoImponibile} onChange={e => setFatturaForm(f => ({ ...f, importoImponibile: e.target.value }))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#4B6E48] focus:outline-none focus:border-[#4B6E48]" placeholder="0.00" />
+                  <EuroAmountInput id="fat-importo" value={fatturaForm.importoImponibile} onValueChange={(nextValue) => setFatturaForm(f => ({ ...f, importoImponibile: nextValue }))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-[#4B6E48] focus:outline-none focus:border-[#4B6E48]" placeholder="0,00" />
                 </div>
                 <div>
                   <label htmlFor="fat-iva" className="text-[9px] font-black uppercase tracking-widest text-gray-600 block mb-1">IVA (%)</label>

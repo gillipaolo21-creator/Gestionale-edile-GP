@@ -27,6 +27,7 @@ export class UpdateMezzoDto {
 
 export class CreateAssegnazioneMezzoDto {
   @IsString() commessaId!: string;
+  @IsString() societaId!: string;
   @IsDateString() dataInizio!: string;
   @IsOptional() @IsDateString() dataFine?: string;
   @IsOptional() @IsNumber() oreImpiegate?: number;

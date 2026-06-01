@@ -1,6 +1,7 @@
 ﻿'use client';
 import { ChevronRight, Download, Eye, FileText, Plus, Truck, Wrench } from 'lucide-react';
 import { useState } from 'react';
+import { downloadDocumentoAutenticato } from '../hooks/documentiClient';
 import type { Documento, DocumentoMetadata, Fornitore } from '../types/domain';
 
 interface TabFornitoriProps {
@@ -19,8 +20,16 @@ export function TabFornitori({
   handleUpdateDocStato,
   setPreviewDoc,
   onAddDocForFornitore,
-}: TabFornitoriProps) {
+}: Readonly<TabFornitoriProps>) {
   const [expandedFornitoriIds, setExpandedFornitoriIds] = useState<Set<string>>(new Set());
+
+  const handleDownloadDocumento = async (docId: string, nomeFile: string) => {
+    try {
+      await downloadDocumentoAutenticato(baseUrl, docId, nomeFile);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Errore durante il download del documento');
+    }
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4">
@@ -191,9 +200,14 @@ export function TabFornitori({
                                   <button type="button" onClick={() => setPreviewDoc({ id: doc.id, nomeFile: doc.nomeFile })} className="p-1.5 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors" title="Anteprima">
                                     <Eye size={13} />
                                   </button>
-                                  <a href={`${baseUrl}/api/documenti/${doc.id}/download`} target="_blank" rel="noopener noreferrer" className="p-1.5 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors">
+                                  <button
+                                    type="button"
+                                    onClick={() => { void handleDownloadDocumento(doc.id, doc.nomeFile); }}
+                                    className="p-1.5 text-gray-600 hover:text-[#4B6E48] hover:bg-blue-50 rounded-lg transition-colors"
+                                    title="Scarica"
+                                  >
                                     <Download size={13} />
-                                  </a>
+                                  </button>
                                 </div>
                               </div>
                             );

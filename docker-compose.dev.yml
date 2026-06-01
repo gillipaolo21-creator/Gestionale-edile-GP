@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: strade-servizi-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: stradeservizi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: strade-servizi-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  api:
+    image: node:24-alpine
+    container_name: strade-servizi-api-dev
+    working_dir: /app
+    restart: unless-stopped
+    command: sh -c "npm install -g pnpm@10.33.0 && pnpm install && pnpm --filter api prisma:generate && pnpm --filter api start:dev"
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/stradeservizi
+      JWT_SECRET: change-me-in-production
+      JWT_EXPIRES_IN: 8h
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      FRONTEND_URL: http://localhost:3000
+      NODE_ENV: development
+      API_HOST: 0.0.0.0
+      STORAGE_BASE_PATH: /app/storage/commesse
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/app
+      - ./storage/commesse:/app/storage/commesse
+      - api_node_modules:/app/node_modules
+    depends_on:
+      - postgres
+      - redis
+
+  web:
+    image: node:24-alpine
+    container_name: strade-servizi-web-dev
+    working_dir: /app
+    restart: unless-stopped
+    command: sh -c "npm install -g pnpm@10.33.0 && pnpm install && pnpm --filter web dev -- --hostname 0.0.0.0 --port 3000"
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      API_BASE_URL: http://api:3001
+      WATCHPACK_POLLING: "true"
+    volumes:
+      - .:/app
+      - web_node_modules:/app/node_modules
+    depends_on:
+      - api
+
+volumes:
+  postgres_data_dev:
+  api_node_modules:
+  web_node_modules:

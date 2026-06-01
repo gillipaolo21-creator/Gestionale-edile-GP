@@ -59,6 +59,7 @@ export class SubappaltatoriService {
       data: {
         subappaltatoreId,
         commessaId: dto.commessaId,
+        societaId: dto.societaId,
         descrizioneOpera: dto.descrizioneOpera,
         importoAffidato: dto.importoAffidato,
         dataInizio: dto.dataInizio ? new Date(dto.dataInizio) : undefined,

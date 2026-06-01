@@ -11,7 +11,7 @@ interface AllegatiClienteModalProps {
 }
 
 export function AllegatiClienteModal({ isOpen, clienti, onClose, onSubmit }: AllegatiClienteModalProps) {
-  const [selectedCliente, setSelectedCliente] = useState('');
+  const [nomeCliente, setNomeCliente] = useState('');
   const [descrizione, setDescrizione] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -19,7 +19,7 @@ export function AllegatiClienteModal({ isOpen, clienti, onClose, onSubmit }: All
   if (!isOpen) return null;
 
   const handleClose = () => {
-    setSelectedCliente('');
+    setNomeCliente('');
     setDescrizione('');
     setFiles([]);
     onClose();
@@ -27,10 +27,11 @@ export function AllegatiClienteModal({ isOpen, clienti, onClose, onSubmit }: All
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCliente || files.length === 0) return;
+    const cliente = nomeCliente.trim();
+    if (!cliente || files.length === 0) return;
     const dt = new DataTransfer();
     files.forEach(f => dt.items.add(f));
-    onSubmit(dt.files, selectedCliente, descrizione);
+    onSubmit(dt.files, cliente, descrizione.trim());
     handleClose();
   };
 
@@ -45,20 +46,29 @@ export function AllegatiClienteModal({ isOpen, clienti, onClose, onSubmit }: All
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
-          {/* Cliente */}
+          {/* Cliente / Contratto */}
           <div className="space-y-2">
-            <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Cliente *</label>
-            <select
+            <label htmlFor="allegati-cliente-nome" className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Cliente / Contratto *</label>
+            <input
+              id="allegati-cliente-nome"
               required
-              value={selectedCliente}
-              onChange={e => setSelectedCliente(e.target.value)}
+              type="text"
+              list="clienti-suggeriti"
+              value={nomeCliente}
+              onChange={e => setNomeCliente(e.target.value)}
+              placeholder="Es: Comune di Milano"
               className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors"
-            >
-              <option value="">Seleziona cliente...</option>
+            />
+            <datalist id="clienti-suggeriti">
               {clienti.map(c => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c} />
               ))}
-            </select>
+            </datalist>
+            <p className="text-[10px] text-gray-500">
+              {clienti.length > 0
+                ? 'Puoi selezionare un cliente esistente o inserirne uno nuovo.'
+                : 'Nessun cliente indicizzato: inserisci manualmente il riferimento contratto.'}
+            </p>
           </div>
 
           {/* Descrizione */}
@@ -110,7 +120,7 @@ export function AllegatiClienteModal({ isOpen, clienti, onClose, onSubmit }: All
             </button>
             <button
               type="submit"
-              disabled={!selectedCliente || files.length === 0}
+              disabled={!nomeCliente.trim() || files.length === 0}
               className="px-5 py-2 text-xs font-black text-white bg-[#4B6E48] rounded-xl hover:bg-[#4B6E48] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Carica

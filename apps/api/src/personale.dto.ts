@@ -31,6 +31,7 @@ export class UpdatePersonaleDto {
 
 export class CreatePresenzaDto {
   @IsString() commessaId!: string;
+  @IsString() societaId!: string;
   @IsDateString() data!: string;
   @IsNumber() oreOrdine!: number;
   @IsOptional() @IsNumber() oreExtra?: number;

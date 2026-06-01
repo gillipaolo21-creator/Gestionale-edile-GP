@@ -1,7 +1,7 @@
 ﻿'use client';
 import { useMemo, useState } from 'react';
-import type { ApiAppaltoVoce } from '../types/domain';
 import type { ColumnMapping, MappableField } from '../components/ExcelColumnPickerModal';
+import type { ApiAppaltoVoce } from '../types/domain';
 import { apiFetch } from './apiFetch';
 
 type ExcelColumns = {
@@ -92,6 +92,7 @@ const shouldSkipDescrizione = (descrizione: string) => {
 export type AppaltoRow = {
   id: string;
   parentId?: string | null;
+  societaId: string;
   descrizione: string;
   unitaMisura: string;
   quantita: string;
@@ -119,6 +120,7 @@ type AppaltoRowApi = ApiAppaltoVoce;
 export function useAppaltoVoci(
   baseUrl: string,
   selectedCommessaId: string | null,
+  defaultSocietaId: string | null,
   setError: (msg: string | null) => void,
 ) {
   const [appaltoRows, setAppaltoRows] = useState<AppaltoRow[]>([]);
@@ -131,6 +133,7 @@ export function useAppaltoVoci(
       setAppaltoRows((data ?? []).map((row) => ({
         id: row.id,
         parentId: row.parentId ?? null,
+        societaId: row.societaId ?? defaultSocietaId ?? '',
         descrizione: row.descrizione || '',
         unitaMisura: row.unitaMisura || '',
         quantita: row.quantita?.toString?.() || '',
@@ -152,6 +155,7 @@ export function useAppaltoVoci(
       {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         parentId: null,
+        societaId: defaultSocietaId ?? '',
         descrizione: '',
         unitaMisura: '',
         quantita: '',
@@ -171,6 +175,7 @@ export function useAppaltoVoci(
       {
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         parentId,
+        societaId: defaultSocietaId ?? '',
         descrizione: '',
         unitaMisura: '',
         quantita: '',
@@ -306,11 +311,18 @@ export function useAppaltoVoci(
     setError(null);
 
     try {
+      const missingSocieta = appaltoRows.find((row) => !row.societaId && (row.descrizione.trim() || row.unitaMisura.trim()));
+      if (missingSocieta) {
+        setError('Seleziona la societa per tutte le voci in appalto.');
+        setIsSavingAppalto(false);
+        return;
+      }
       const payload = appaltoRows
         .filter((row) => row.descrizione.trim() || row.unitaMisura.trim())
         .map((row) => ({
           id: row.id,
           parentId: row.parentId || null,
+          societaId: row.societaId,
           descrizione: row.descrizione,
           unitaMisura: row.unitaMisura,
           quantita: Number.parseFloat(row.quantita.replace(',', '.')) || 0,
@@ -329,6 +341,7 @@ export function useAppaltoVoci(
       setAppaltoRows((saved ?? []).map((row) => ({
         id: row.id,
         parentId: row.parentId ?? null,
+        societaId: row.societaId ?? defaultSocietaId ?? '',
         descrizione: row.descrizione || '',
         unitaMisura: row.unitaMisura || '',
         quantita: row.quantita?.toString?.() || '',
@@ -504,6 +517,7 @@ export function useAppaltoVoci(
       importedRows.push({
         id,
         parentId,
+        societaId: defaultSocietaId ?? '',
         descrizione,
         unitaMisura,
         quantita: quantitaValue != null ? String(quantitaValue) : '',

@@ -37,4 +37,12 @@ export class UploadDocumentoDto {
   @IsOptional()
   @IsString()
   datiEstrattiJson?: string;
+
+  @ApiPropertyOptional({
+    example: 'Gara Milano/Elaborati/Planimetria piano terra.pdf',
+    description: 'Percorso relativo opzionale per import cartelle (mantiene la struttura)',
+  })
+  @IsOptional()
+  @IsString()
+  relativePath?: string;
 }

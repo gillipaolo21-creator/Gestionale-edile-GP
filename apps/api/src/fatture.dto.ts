@@ -10,6 +10,9 @@ export class CreateFatturaDto {
   @ApiProperty({ example: 'clxyz123' })
   @IsString() commessaId!: string;
 
+  @ApiProperty({ example: 'soc_strade_servizi' })
+  @IsString() societaId!: string;
+
   @ApiPropertyOptional() @IsOptional() @IsString() salId?: string;
   @ApiPropertyOptional({ example: '2026/001' }) @IsOptional() @IsString() numero?: string;
   @ApiPropertyOptional({ example: 'Comune di Milano' }) @IsOptional() @IsString() fornitoreCliente?: string;
@@ -29,6 +32,9 @@ export class CreateFatturaNestedDto {
   @ApiProperty({ enum: TipoDocumentoFiscale })
   @IsEnum(TipoDocumentoFiscale) tipoDocumento!: TipoDocumentoFiscale;
 
+  @ApiProperty({ example: 'soc_strade_servizi' })
+  @IsString() societaId!: string;
+
   @ApiPropertyOptional() @IsOptional() @IsString() salId?: string;
   @ApiPropertyOptional({ example: '2026/001' }) @IsOptional() @IsString() numero?: string;
   @ApiPropertyOptional({ example: 'Comune di Milano' }) @IsOptional() @IsString() fornitoreCliente?: string;
@@ -44,6 +50,8 @@ export class CreateFatturaNestedDto {
 }
 
 export class UpdateFatturaDto {
+  @ApiPropertyOptional({ example: 'soc_strade_servizi' })
+  @IsOptional() @IsString() societaId?: string;
   @ApiPropertyOptional({ example: '2026/002' }) @IsOptional() @IsString() numero?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() fornitoreCliente?: string;
   @ApiPropertyOptional({ example: 15000 }) @IsOptional() @IsNumber() importoImponibile?: number;

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { Documento, TipoEntitaDocumento } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
@@ -9,6 +9,8 @@ import { PrismaService } from '../prisma/prisma.service';
 @Injectable()
 export class DocumentiService implements OnModuleInit {
   private readonly logger = new Logger(DocumentiService.name);
+  private static readonly SQLITE_RETRY_DELAYS_MS = [120, 300];
+  private static readonly MAX_FILENAME_CHARS = 140;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -31,6 +33,125 @@ export class DocumentiService implements OnModuleInit {
     return name.replace(/[/\\?%*:|"<>]/g, '-').trim();
   }
 
+  private getSafeDisplayName(name: string): string {
+    const sanitized = this.sanitize(name);
+    if (!sanitized) {
+      return 'documento';
+    }
+    return sanitized.slice(0, DocumentiService.MAX_FILENAME_CHARS);
+  }
+
+  private buildUniqueStorageName(displayName: string): string {
+    const parsed = path.parse(displayName);
+    const ext = parsed.ext || '';
+    const base = parsed.name || 'documento';
+    const maxBaseLength = Math.max(1, DocumentiService.MAX_FILENAME_CHARS - ext.length);
+    const truncatedBase = base.slice(0, maxBaseLength);
+    return `${Date.now()}_${truncatedBase}${ext}`;
+  }
+
+  private isDatabaseLockedError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    return (
+      message.includes('database is locked')
+      || message.includes('sqlite_busy')
+      || message.includes('p2034')
+    );
+  }
+
+  private async createDocumentoWithRetry(data: {
+    commessaId: string | null;
+    entitaTipo: TipoEntitaDocumento;
+    entitaId: string;
+    nomeFile: string;
+    storageUrl: string;
+    hashFile: string;
+    categoria: string | null;
+    sottocategoria: string | null;
+    datiEstrattiJson: string | null;
+    mimeType: string;
+    dimensione: number;
+  }): Promise<Documento> {
+    const delays = [0, ...DocumentiService.SQLITE_RETRY_DELAYS_MS];
+
+    for (let attempt = 0; attempt < delays.length; attempt += 1) {
+      if (delays[attempt] > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+      }
+
+      try {
+        return await this.prisma.documento.create({ data });
+      } catch (error) {
+        const isLocked = this.isDatabaseLockedError(error);
+        const isLastAttempt = attempt === delays.length - 1;
+
+        if (!isLocked || isLastAttempt) {
+          throw error;
+        }
+
+        this.logger.warn(`Database lock durante upload documento, retry ${attempt + 1}/${delays.length - 1}`);
+      }
+    }
+
+    throw new InternalServerErrorException('Impossibile completare il caricamento del documento.');
+  }
+
+  private sanitizeRelativePath(relativePath: string): string {
+    const normalized = relativePath.split('\\').join('/').trim();
+    if (!normalized) return '';
+
+    const safeSegments = normalized
+      .split('/')
+      .filter((segment) => segment && segment !== '.' && segment !== '..')
+      .map((segment) => this.sanitize(segment))
+      .filter(Boolean);
+
+    return safeSegments.join(path.sep);
+  }
+
+  private toDisplayPath(localPath: string): string {
+    return localPath.split(path.sep).join('/');
+  }
+
+  private resolveSafeChildPath(basePath: string, childPath: string): string {
+    const safeChild = childPath.replace(/^[/\\]+/, '');
+    const resolvedBase = path.resolve(basePath);
+    const resolvedTarget = path.resolve(resolvedBase, safeChild);
+
+    if (resolvedTarget !== resolvedBase && !resolvedTarget.startsWith(`${resolvedBase}${path.sep}`)) {
+      throw new BadRequestException('Percorso file non valido');
+    }
+
+    return resolvedTarget;
+  }
+
+  private async listFilesRecursive(rootPath: string, relativePath = ''): Promise<{ name: string; size: number }[]> {
+    const currentPath = relativePath
+      ? this.resolveSafeChildPath(rootPath, relativePath)
+      : rootPath;
+
+    const entries = await fs.readdir(currentPath, { withFileTypes: true });
+    const output: { name: string; size: number }[] = [];
+
+    for (const entry of entries) {
+      const nextRelative = relativePath
+        ? path.posix.join(relativePath.split('\\').join('/'), entry.name)
+        : entry.name;
+
+      if (entry.isDirectory()) {
+        output.push(...await this.listFilesRecursive(rootPath, nextRelative));
+        continue;
+      }
+
+      if (entry.isFile()) {
+        const stat = await fs.stat(path.join(currentPath, entry.name));
+        output.push({ name: nextRelative, size: stat.size });
+      }
+    }
+
+    return output;
+  }
+
   async uploadAndSave(
     file: Express.Multer.File,
     entitaTipo: TipoEntitaDocumento,
@@ -38,6 +159,7 @@ export class DocumentiService implements OnModuleInit {
     categoria?: string,
     sottocategoria?: string,
     _datiEstrattiJson?: string,
+    relativePath?: string,
   ): Promise<Documento> {
 
     // Verifiche per COMMESSA e relative categorie
@@ -56,14 +178,14 @@ export class DocumentiService implements OnModuleInit {
     }
 
     const hash = createHash('sha256').update(file.buffer).digest('hex');
-    const sanitizedOriginal = this.sanitize(file.originalname);
-    const uniqueName = `${Date.now()}_${sanitizedOriginal}`;
+    const sanitizedOriginal = this.getSafeDisplayName(path.basename(file.originalname));
+    const uniqueName = this.buildUniqueStorageName(sanitizedOriginal);
 
     let subDirName: string;
     if (sottocategoria) {
-      subDirName = this.sanitize(sottocategoria);
+      subDirName = this.sanitize(sottocategoria) || '_';
     } else if (categoria) {
-      subDirName = this.sanitize(categoria);
+      subDirName = this.sanitize(categoria) || '_';
     } else {
       subDirName = '_';
     }
@@ -74,15 +196,46 @@ export class DocumentiService implements OnModuleInit {
       entitaId,
       subDirName,
     );
-    await fs.mkdir(subDir, { recursive: true });
-    const filePath = path.join(subDir, uniqueName);
-    await fs.writeFile(filePath, file.buffer);
 
-    return this.prisma.documento.create({
-      data: {
+    let targetDir = subDir;
+    let displayFileName = sanitizedOriginal;
+
+    if (relativePath) {
+      const safeRelativePath = this.sanitizeRelativePath(relativePath);
+      if (safeRelativePath) {
+        const relativeDir = path.dirname(safeRelativePath);
+        if (relativeDir && relativeDir !== '.') {
+          targetDir = this.resolveSafeChildPath(subDir, relativeDir);
+        }
+        displayFileName = this.toDisplayPath(safeRelativePath);
+      }
+    }
+
+    const filePath = path.join(targetDir, uniqueName);
+
+    try {
+      await fs.mkdir(targetDir, { recursive: true });
+      await fs.writeFile(filePath, file.buffer);
+    } catch (error: unknown) {
+      const code = (error as NodeJS.ErrnoException | undefined)?.code;
+
+      if (code === 'ENAMETOOLONG') {
+        throw new BadRequestException('Nome file o percorso troppo lungo. Rinomina il file con un nome più breve e riprova.');
+      }
+
+      if (code === 'EACCES' || code === 'EPERM') {
+        throw new InternalServerErrorException('Permessi insufficienti sulla cartella di storage documenti.');
+      }
+
+      throw new InternalServerErrorException('Impossibile salvare il file sul server.');
+    }
+
+    try {
+      return await this.createDocumentoWithRetry({
+        commessaId: entitaTipo === TipoEntitaDocumento.COMMESSA ? entitaId : null,
         entitaTipo,
         entitaId,
-        nomeFile: sanitizedOriginal,
+        nomeFile: displayFileName,
         storageUrl: filePath,
         hashFile: hash,
         categoria: categoria ?? null,
@@ -90,8 +243,13 @@ export class DocumentiService implements OnModuleInit {
         datiEstrattiJson: _datiEstrattiJson ?? null,
         mimeType: file.mimetype,
         dimensione: file.size,
-      },
-    });
+      });
+    } catch (error) {
+      if (this.isDatabaseLockedError(error)) {
+        throw new InternalServerErrorException('Database temporaneamente occupato durante il caricamento. Riprova tra qualche secondo.');
+      }
+      throw error;
+    }
   }
 
   async findByEntita(entitaTipo: TipoEntitaDocumento, entitaId: string): Promise<Documento[]> {
@@ -182,14 +340,8 @@ export class DocumentiService implements OnModuleInit {
   async listFilesInPmFolder(folderName: string): Promise<{ name: string; size: number }[]> {
     const folderPath = path.join(this.storageBasePath, this.sanitize(folderName));
     try {
-      const entries = await fs.readdir(folderPath, { withFileTypes: true });
-      const files = entries.filter((e) => e.isFile());
-      return Promise.all(
-        files.map(async (f) => {
-          const stat = await fs.stat(path.join(folderPath, f.name));
-          return { name: f.name, size: stat.size };
-        }),
-      );
+      const files = await this.listFilesRecursive(folderPath);
+      return files.sort((a, b) => a.name.localeCompare(b.name, 'it'));
     } catch {
       return [];
     }
@@ -223,27 +375,41 @@ export class DocumentiService implements OnModuleInit {
 
     const results: Documento[] = [];
     for (const fileName of fileNames) {
-      const srcPath = path.join(folderPath, this.sanitize(fileName));
+      const safeRelativePath = this.sanitizeRelativePath(fileName);
+      if (!safeRelativePath) continue;
+
+      const srcPath = this.resolveSafeChildPath(folderPath, safeRelativePath);
+
       try {
         const buffer = await fs.readFile(srcPath);
         const hash = createHash('sha256').update(buffer).digest('hex');
-        const sanitizedName = this.sanitize(fileName);
+        const fileBaseName = path.basename(safeRelativePath);
+        const sanitizedName = this.sanitize(fileBaseName);
         const uniqueName = `${Date.now()}_${sanitizedName}`;
-        const subDir = path.join(this.storageBasePath, 'COMMESSA', commessaId, this.sanitize(categoria));
+
+        let subDir = path.join(this.storageBasePath, 'COMMESSA', commessaId, this.sanitize(categoria));
+        const relativeDir = path.dirname(safeRelativePath);
+        if (relativeDir && relativeDir !== '.') {
+          subDir = this.resolveSafeChildPath(subDir, relativeDir);
+        }
+
         await fs.mkdir(subDir, { recursive: true });
         const destPath = path.join(subDir, uniqueName);
         await fs.writeFile(destPath, buffer);
-        const ext = path.extname(fileName).toLowerCase();
+        const ext = path.extname(fileBaseName).toLowerCase();
         const doc = await this.prisma.documento.create({
           data: {
             entitaTipo: TipoEntitaDocumento.COMMESSA,
             entitaId: commessaId,
-            nomeFile: sanitizedName,
+            nomeFile: this.toDisplayPath(safeRelativePath),
             storageUrl: destPath,
             hashFile: hash,
             categoria,
             sottocategoria: null,
-            datiEstrattiJson: JSON.stringify({ importedFrom: folderName }),
+            datiEstrattiJson: JSON.stringify({
+              importedFrom: folderName,
+              relativePath: this.toDisplayPath(safeRelativePath),
+            }),
             mimeType: mimeMap[ext] ?? 'application/octet-stream',
             dimensione: buffer.length,
           },

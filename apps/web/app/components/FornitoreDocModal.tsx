@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import React from 'react';
+import { EuroAmountInput } from './EuroAmountInput';
 
 interface Fornitore {
   ragioneSociale: string;
@@ -81,13 +82,11 @@ export function FornitoreDocModal({ isOpen, fornitore, form, setForm, files, set
               <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Importo (€)</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-800 font-bold text-sm">€</span>
-                <input
-                  type="number"
-                  step="0.01"
+                <EuroAmountInput
                   placeholder="0,00"
                   className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors"
                   value={form.importo}
-                  onChange={e => setForm({ ...form, importo: e.target.value })}
+                  onValueChange={(nextValue) => setForm({ ...form, importo: nextValue })}
                 />
               </div>
             </div>

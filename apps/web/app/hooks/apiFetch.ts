@@ -1,7 +1,7 @@
 ﻿const TOKEN_KEY = 'strade_servizi_token';
 
 function getToken(): string | null {
-  if (typeof globalThis.window === 'undefined') return null;
+  if (globalThis.window === undefined) return null;
   return localStorage.getItem(TOKEN_KEY);
 }
 
@@ -31,17 +31,19 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T = unknown>(
+async function fetchWithAuth(
   url: string,
-  options: RequestInit = {},
-): Promise<T> {
+  options: RequestInit,
+  addJsonHeader: boolean,
+): Promise<Response> {
   const token = getToken();
   const isFormData = options.body instanceof FormData;
 
   const headers: Record<string, string> = {
-    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+    ...(addJsonHeader && !isFormData ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string> | undefined),
   };
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -52,7 +54,7 @@ export async function apiFetch<T = unknown>(
     const message = await parseErrorMessage(res);
 
     // Sessione scaduta: reindirizza al login
-    if (res.status === 401 && typeof globalThis.window !== 'undefined') {
+    if (res.status === 401 && globalThis.window !== undefined) {
       localStorage.removeItem(TOKEN_KEY);
       globalThis.location.href = '/login';
     }
@@ -60,7 +62,32 @@ export async function apiFetch<T = unknown>(
     throw new ApiError(res.status, message);
   }
 
+  return res;
+}
+
+export async function apiFetch<T = unknown>(
+  url: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const res = await fetchWithAuth(url, options, true);
+
   const text = await res.text();
   return text ? JSON.parse(text) as T : undefined as unknown as T;
+}
+
+export async function apiFetchText(
+  url: string,
+  options: RequestInit = {},
+): Promise<string> {
+  const res = await fetchWithAuth(url, options, false);
+  return res.text();
+}
+
+export async function apiFetchBlob(
+  url: string,
+  options: RequestInit = {},
+): Promise<Blob> {
+  const res = await fetchWithAuth(url, options, false);
+  return res.blob();
 }
 

@@ -1,4 +1,5 @@
-FROM node:20-alpine AS base
+ARG NODE_VERSION=24
+FROM node:${NODE_VERSION}-alpine AS base
 WORKDIR /app
 RUN npm install -g pnpm
 
@@ -13,7 +14,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm --filter api build
 
-FROM node:20-alpine AS runner
+FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 RUN npm install -g pnpm
 COPY --from=builder /app/apps/api/dist ./dist

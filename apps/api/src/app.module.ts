@@ -12,6 +12,7 @@ import { PersonaleModule } from './personale.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { SalModule } from './sal.module';
 import { SicurezzaModule } from './sicurezza.module';
+import { SocietaModule } from './societa/societa.module';
 import { SubappaltatoriModule } from './subappaltatori.module';
 
 @Module({
@@ -35,6 +36,7 @@ import { SubappaltatoriModule } from './subappaltatori.module';
     SicurezzaModule,
     SubappaltatoriModule,
     JobsModule,
+    SocietaModule,
   ],
   controllers: [],
   providers: [],

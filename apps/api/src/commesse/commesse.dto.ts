@@ -4,6 +4,9 @@ import { Type } from 'class-transformer';
 import { IsArray, IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class CreateCommessaDto {
+  @ApiProperty({ example: 'soc_strade_servizi', description: 'Societa titolare della commessa' })
+  @IsString() societaId!: string;
+
   @ApiProperty({ example: 'CME-2026-001', description: 'Codice univoco commessa' })
   @IsString() codiceIdentificativo!: string;
 
@@ -68,6 +71,9 @@ export class CreateCommessaDto {
 }
 
 export class UpdateCommessaDto {
+  @ApiPropertyOptional({ example: 'soc_strade_servizi' })
+  @IsOptional() @IsString() societaId?: string;
+
   @ApiPropertyOptional({ example: 'Cantiere Aggiornato' })
   @IsOptional() @IsString() nomeCantiere?: string;
 
@@ -96,6 +102,8 @@ export class UpdateCommessaDto {
 export class UpsertAppaltoVoceDto {
   @ApiProperty() @IsString() @IsNotEmpty() id!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() parentId?: string | null;
+  @ApiProperty({ example: 'soc_strade_servizi' })
+  @IsString() societaId!: string;
   @ApiProperty() @IsString() descrizione!: string;
   @ApiProperty() @IsString() unitaMisura!: string;
   @ApiProperty() @IsNumber() quantita!: number;

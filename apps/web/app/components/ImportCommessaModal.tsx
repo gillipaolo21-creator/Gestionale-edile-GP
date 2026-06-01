@@ -4,6 +4,7 @@ import {
     FileInput, FolderOpen, Hash, Loader2, MapPin, Paperclip, StickyNote, Upload, User, X,
 } from 'lucide-react';
 import React, { useRef } from 'react';
+import { EuroAmountInput } from './EuroAmountInput';
 
 const TIPO_OPERA_OPTIONS = [
   { value: 'MOVIMENTO_TERRA', label: 'Movimento Terra' },
@@ -22,6 +23,7 @@ const STATO_OPTIONS = [
 ];
 
 export interface ImportFormData {
+  societaId: string;
   codiceIdentificativo: string;
   nomeCliente: string;
   tipoOpera: string;
@@ -46,6 +48,7 @@ interface ImportCommessaModalProps {
   submitting: boolean;
   formData: ImportFormData;
   setFormData: React.Dispatch<React.SetStateAction<ImportFormData>>;
+  societaOptions: { id: string; nome: string }[];
   onClose: () => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void | Promise<void>;
   // Selezione documenti
@@ -84,12 +87,29 @@ function formatBytes(bytes: number): string {
 }
 
 export function ImportCommessaModal({
-  isOpen, success, submitting, formData, setFormData, onClose, onSubmit,
+  isOpen, success, submitting, formData, setFormData, societaOptions, onClose, onSubmit,
   pmFolders, importDocMode, setImportDocMode, selectedPmFolder, onSelectPmFolder,
   pmFolderFiles, selectedFileNames, toggleFileName, localFiles, onLocalFilesChange,
   loadingFolderFiles,
 }: ImportCommessaModalProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const folderPickerAttrs = {
+    webkitdirectory: 'true',
+    directory: 'true',
+  } as unknown as React.InputHTMLAttributes<HTMLInputElement>;
+
+  const selectedRootFolders = Array.from(new Set(
+    localFiles
+      .map((file) => {
+        const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+        if (!relativePath) return '';
+        const root = relativePath.split('/')[0];
+        return root || '';
+      })
+      .filter(Boolean),
+  ));
+
   if (!isOpen) return null;
 
   const canSubmit = !submitting && (
@@ -143,6 +163,14 @@ export function ImportCommessaModal({
                     required type="text" placeholder="Es: 2025-COMM-007"
                     className={inputCls} value={formData.codiceIdentificativo} onChange={set('codiceIdentificativo')}
                   />
+                </Field>
+                <Field label="Societa" icon={<Briefcase size={9} />}>
+                  <select required className={inputCls} value={formData.societaId} onChange={set('societaId')}>
+                    <option value="">-- Seleziona --</option>
+                    {societaOptions.map((s) => (
+                      <option key={s.id} value={s.id}>{s.nome}</option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label="Stato Attuale" icon={<Briefcase size={9} />}>
                   <select required className={inputCls} value={formData.stato} onChange={set('stato')}>
@@ -218,15 +246,21 @@ export function ImportCommessaModal({
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <Field label="Importo Contratto (€)" icon={<Banknote size={9} />}>
-                  <input
-                    type="number" min="0" step="0.01" placeholder="Es: 250000"
-                    className={inputCls} value={formData.importoContratto} onChange={set('importoContratto')}
+                  <EuroAmountInput
+                    min="0"
+                    placeholder="Es: 250000"
+                    className={inputCls}
+                    value={formData.importoContratto}
+                    onValueChange={(nextValue) => setFormData((prev) => ({ ...prev, importoContratto: nextValue }))}
                   />
                 </Field>
                 <Field label="Importo Lavori Propri (€)" icon={<Banknote size={9} />}>
-                  <input
-                    type="number" min="0" step="0.01" placeholder="Es: 200000"
-                    className={inputCls} value={formData.importoLavoriPropri} onChange={set('importoLavoriPropri')}
+                  <EuroAmountInput
+                    min="0"
+                    placeholder="Es: 200000"
+                    className={inputCls}
+                    value={formData.importoLavoriPropri}
+                    onValueChange={(nextValue) => setFormData((prev) => ({ ...prev, importoLavoriPropri: nextValue }))}
                   />
                 </Field>
               </div>
@@ -383,21 +417,49 @@ export function ImportCommessaModal({
                     className="hidden"
                     onChange={(e) => onLocalFilesChange(Array.from(e.target.files ?? []))}
                   />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full border-2 border-dashed border-slate-300 rounded-xl py-6 flex flex-col items-center gap-2 text-gray-400 hover:border-[#4B6E48] hover:text-[#4B6E48] transition-colors"
-                  >
-                    <Upload size={24} />
-                    <span className="text-[9px] font-black uppercase tracking-widest">Clicca per scegliere i file</span>
-                    <span className="text-[10px]">PDF, DOCX, XLSX, immagini — max 50 MB per file</span>
-                  </button>
+                  <input
+                    ref={folderInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => onLocalFilesChange(Array.from(e.target.files ?? []))}
+                    {...folderPickerAttrs}
+                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full border-2 border-dashed border-slate-300 rounded-xl py-6 flex flex-col items-center gap-2 text-gray-400 hover:border-[#4B6E48] hover:text-[#4B6E48] transition-colors"
+                    >
+                      <Upload size={24} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Seleziona file singoli</span>
+                      <span className="text-[10px]">PDF, DOCX, XLSX, immagini</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => folderInputRef.current?.click()}
+                      className="w-full border-2 border-dashed border-slate-300 rounded-xl py-6 flex flex-col items-center gap-2 text-gray-400 hover:border-[#4B6E48] hover:text-[#4B6E48] transition-colors"
+                    >
+                      <FolderOpen size={24} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">Seleziona cartella intera</span>
+                      <span className="text-[10px]">Import ricorsivo con sottocartelle</span>
+                    </button>
+                  </div>
+
+                  {selectedRootFolders.length > 0 && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] text-emerald-700">
+                      <span className="font-black uppercase tracking-widest">Cartella selezionata:</span>{' '}
+                      {selectedRootFolders.join(', ')}
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-gray-500">Max 50 MB per file.</p>
+
                   {localFiles.length > 0 && (
                     <ul className="divide-y divide-slate-200 border border-slate-300 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
                       {localFiles.map((file, i) => (
                         <li key={`${file.name}-${i}`} className="flex items-center gap-3 px-4 py-2.5">
                           <Paperclip size={12} className="text-gray-400 flex-shrink-0" />
-                          <span className="text-xs text-gray-700 font-medium flex-1 truncate">{file.name}</span>
+                          <span className="text-xs text-gray-700 font-medium flex-1 truncate">{(file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name}</span>
                           <span className="text-[10px] text-gray-400">{formatBytes(file.size)}</span>
                           <button
                             type="button"

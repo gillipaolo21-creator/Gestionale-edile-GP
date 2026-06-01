@@ -30,6 +30,7 @@ export class UpdateSubappaltatoreDto {
 
 export class CreateContrattoSubappaltoDto {
   @IsString() commessaId!: string;
+  @IsString() societaId!: string;
   @IsString() descrizioneOpera!: string;
   @IsNumber() importoAffidato!: number;
   @IsOptional() @IsDateString() dataInizio?: string;
@@ -38,6 +39,7 @@ export class CreateContrattoSubappaltoDto {
 }
 
 export class UpdateContrattoSubappaltoDto {
+  @IsOptional() @IsString() societaId?: string;
   @IsOptional() @IsString() descrizioneOpera?: string;
   @IsOptional() @IsNumber() importoAffidato?: number;
   @IsOptional() @IsDateString() dataInizio?: string;

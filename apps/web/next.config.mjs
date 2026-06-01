@@ -1,7 +1,12 @@
 /** @type {import('next').NextConfig} */
+const apiBaseUrl = (process.env.API_BASE_URL || 'http://127.0.0.1:3001').replace(/\/$/, '');
+
 const nextConfig = {
   // SOLID: Permette a Next.js di compilare i pacchetti condivisi del monorepo
   transpilePackages: ["@strade-servizi/db"],
+
+  // Docker: produce output standalone per il runtime container
+  output: 'standalone',
 
   // Disabilitiamo l'indicatore di overlay che può interferire con il design
   devIndicators: {
@@ -14,10 +19,10 @@ const nextConfig = {
         /**
          * PROXY DEFINITIVO:
          * Risolviamo il "Failed to fetch" (CORS).
-         * Usiamo 127.0.0.1 per evitare i ritardi di risoluzione DNS di Windows.
+         * API_BASE_URL permette di cambiare host in Docker/prod.
          */
         source: '/api/:path*',
-        destination: 'http://127.0.0.1:3001/:path*',
+        destination: `${apiBaseUrl}/:path*`,
       },
     ];
   },

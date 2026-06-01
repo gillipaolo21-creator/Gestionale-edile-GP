@@ -6,7 +6,8 @@ import type {
     ApiCommessaList,
     ApiFattura,
     ApiFornitura,
-    ApiSal
+    ApiSal,
+    ApiSocieta
 } from './api';
 
 // ─── Navigation ─────────────────────────────────────────────────────────────
@@ -85,6 +86,10 @@ export interface Fornitore {
   telefono?: string;
   attivita?: string;
 }
+
+// ─── Societa' ──────────────────────────────────────────────────────────────
+
+export type Societa = ApiSocieta;
 
 // ─── Forniture ──────────────────────────────────────────────────────────────
 

@@ -78,6 +78,7 @@ export class PersonaleService {
       data: {
         personaleId,
         commessaId: dto.commessaId,
+        societaId: dto.societaId,
         data: new Date(dto.data),
         oreOrdine: dto.oreOrdine,
         oreExtra: dto.oreExtra ?? 0,

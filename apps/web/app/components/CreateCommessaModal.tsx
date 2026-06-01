@@ -1,8 +1,10 @@
 ﻿'use client';
 import { Briefcase, CheckCircle2, Hash, Loader2, MapPin, User, UserCheck, X } from 'lucide-react';
 import React from 'react';
+import type { Societa } from '../types/domain';
 
 interface FormData {
+  societaId: string;
   codiceIdentificativo: string;
   tipoLavori: string;
   nomeCliente: string;
@@ -19,6 +21,7 @@ interface CreateCommessaModalProps {
   submitting: boolean;
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
+  societaOptions: Societa[];
   pmFolders: string[];
   pmMode: 'select' | 'free';
   setPmMode: (mode: 'select' | 'free') => void;
@@ -27,7 +30,7 @@ interface CreateCommessaModalProps {
 }
 
 export function CreateCommessaModal({
-  isOpen, success, submitting, formData, setFormData, pmFolders, pmMode, setPmMode, onClose, onSubmit,
+  isOpen, success, submitting, formData, setFormData, societaOptions, pmFolders, pmMode, setPmMode, onClose, onSubmit,
 }: CreateCommessaModalProps) {
   if (!isOpen) return null;
 
@@ -54,6 +57,20 @@ export function CreateCommessaModal({
         ) : (
           <form onSubmit={onSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
             <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Societa</label>
+                <select
+                  required
+                  className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors"
+                  value={formData.societaId}
+                  onChange={e => setFormData({ ...formData, societaId: e.target.value })}
+                >
+                  <option value="">Seleziona societa...</option>
+                  {societaOptions.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nome}</option>
+                  ))}
+                </select>
+              </div>
               <div className="space-y-2">
                 <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest flex items-center gap-2"><Hash size={10} /> Codice Univoco</label>
                 <input readOnly type="text" className="w-full bg-[#F2F2F2] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none" value={formData.codiceIdentificativo} />

@@ -83,6 +83,7 @@ export class CommesseService {
   async create(dto: CreateCommessaDto): Promise<Commessa> {
     return this.prisma.commessa.create({
       data: {
+        societaId: dto.societaId,
         codiceIdentificativo: dto.codiceIdentificativo,
         nomeCantiere: dto.nomeCantiere ?? dto.codiceIdentificativo,
         committente: dto.committente ?? dto.nomeCliente,
@@ -150,7 +151,7 @@ export class CommesseService {
     totaleBudget: number;
     avanzamentoMedio: number;
   }> {
-    const [commesse, sals] = await Promise.all([
+    const [commesse, salRows] = await Promise.all([
       this.prisma.commessa.findMany({
         select: { stato: true, importoContratto: true, importoLavoriPropri: true },
       }),
@@ -171,8 +172,8 @@ export class CommesseService {
     }
 
     const avanzamentoMedio =
-      sals.length > 0
-        ? sals.reduce((acc, s) => acc + Number(s.percentualeCompletamento ?? 0), 0) / sals.length
+      salRows.length > 0
+        ? salRows.reduce((acc, s) => acc + Number(s.percentualeCompletamento ?? 0), 0) / salRows.length
         : 0;
 
     return { totaleCommesse: commesse.length, commessePerStato, totaleImporti, totaleBudget, avanzamentoMedio };
@@ -198,6 +199,7 @@ export class CommesseService {
           id: idMap.get(row.id)!,
           commessaId,
           parentId: row.parentId ? (idMap.get(row.parentId) ?? null) : null,
+          societaId: row.societaId,
           descrizione: row.descrizione,
           unitaMisura: row.unitaMisura,
           quantita: row.quantita,

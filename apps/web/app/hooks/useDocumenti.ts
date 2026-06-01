@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import type { CreateFornitoreFormData } from '../components/CreateFornitoreModal';
 import type { VarianteVoce } from '../components/VarianteModal';
 import type { Commessa, Documento, DocumentoMetadata, Fornitore } from '../types/domain';
-import { apiFetch } from './apiFetch';
+import { ApiError, apiFetch } from './apiFetch';
 
 type ContrattoClienteForm = {
   nomeCliente: string;
@@ -121,6 +121,31 @@ export function useDocumenti(
   const [createFornitoreSubmitting, setCreateFornitoreSubmitting] = useState(false);
   const [subappaltatoriAnagrafici, setSubappaltatoriAnagrafici] = useState<Fornitore[]>([]);
 
+  const wait = (ms: number): Promise<void> => new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+  const uploadDocumentoPayload = async (payload: FormData, fileName?: string): Promise<void> => {
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+        return;
+      } catch (err: unknown) {
+        const isRetryableServerError = err instanceof ApiError && err.status >= 500;
+        if (isRetryableServerError && attempt < 2) {
+          await wait(250 * attempt);
+          continue;
+        }
+
+        if (err instanceof Error) {
+          const suffix = fileName ? ` (file: ${fileName})` : '';
+          throw new Error(`${err.message}${suffix}`);
+        }
+        throw err;
+      }
+    }
+  };
+
   // ─── Fetches ─────────────────────────────────────────────────────────────
   const fetchDocumenti = async (commessaId: string) => {
     try {
@@ -179,6 +204,22 @@ export function useDocumenti(
       if (selectedCommessa) await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Errore durante l'eliminazione della variante");
+    }
+  };
+
+  const handleDeleteDocumenti = async (documentoIds: string[]) => {
+    if (!selectedCommessa || documentoIds.length === 0) return;
+    setIsUploading(true);
+    setError(null);
+    try {
+      for (const documentoId of documentoIds) {
+        await apiFetch(`${baseUrl}/api/documenti/${documentoId}`, { method: 'DELETE' });
+      }
+      await fetchDocumenti(selectedCommessa.id);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Errore durante l'eliminazione dei documenti");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -243,7 +284,7 @@ export function useDocumenti(
         payload.append('categoria', 'Contratti Cliente');
         payload.append('sottocategoria', contrattoClienteForm.nomeCliente);
         payload.append('datiEstrattiJson', metadata);
-        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+        await uploadDocumentoPayload(payload, file.name);
       }
       setShowContrattoClienteModal(false);
       setContrattoClienteForm({ nomeCliente: '', dataContratto: new Date().toISOString().split('T')[0], importoContratto: '', note: '' });
@@ -296,7 +337,7 @@ export function useDocumenti(
           payload.append('categoria', 'Contratti Cliente');
           payload.append('sottocategoria', 'Variante');
           payload.append('datiEstrattiJson', metadata);
-          await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+          await uploadDocumentoPayload(payload, file.name);
         }
       }
       setShowVarianteModal(false);
@@ -342,7 +383,7 @@ export function useDocumenti(
         payload.append('categoria', 'Contratti Fornitori');
         payload.append('sottocategoria', contrattoFornitoreForm.ragioneSociale);
         payload.append('datiEstrattiJson', metadata);
-        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+        await uploadDocumentoPayload(payload, file.name);
       }
       setShowContrattoFornitoreModal(false);
       setContrattoFornitoreForm({ ragioneSociale: '', partitaIva: '', attivita: '', tipo: 'Fornitore di Materiale', referente: '', telefono: '', isNuovoFornitore: true });
@@ -378,7 +419,7 @@ export function useDocumenti(
         payload.append('entitaId', selectedCommessa.id);
         payload.append('categoria', 'Documentazione Progettuale');
         payload.append('datiEstrattiJson', metadata);
-        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+        await uploadDocumentoPayload(payload, file.name);
       }
       setShowDocProgettualeModal(false);
       setDocProgettualeForm({ nome: '', descrizione: '', note: '' });
@@ -420,7 +461,7 @@ export function useDocumenti(
         payload.append('categoria', categoriaUpload);
         payload.append('sottocategoria', selectedFornitore.ragioneSociale);
         payload.append('datiEstrattiJson', metadata);
-        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+        await uploadDocumentoPayload(payload, file.name);
       }
       setShowFornitoreDocModal(false);
       setFornitoreDocForm({ tipoDocumento: '', importo: '', tempiPagamento: '', note: '' });
@@ -443,7 +484,7 @@ export function useDocumenti(
       payload.append('entitaTipo', 'COMMESSA');
       payload.append('entitaId', selectedCommessa.id);
       payload.append('categoria', categoria);
-      await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+      await uploadDocumentoPayload(payload, file.name);
       await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Errore durante il caricamento del file');
@@ -556,7 +597,11 @@ export function useDocumenti(
   }, [documenti]);
 
   const handleAllegatiClienteUpload = async (files: FileList, nomeCliente: string, descrizione?: string) => {
-    if (!selectedCommessa || files.length === 0) return;
+    const cliente = nomeCliente.trim();
+    if (!selectedCommessa || files.length === 0 || !cliente) {
+      if (!cliente) setError('Inserisci un riferimento cliente/contratto valido.');
+      return;
+    }
     setIsUploading(true);
     setError(null);
     try {
@@ -566,9 +611,9 @@ export function useDocumenti(
         payload.append('entitaTipo', 'COMMESSA');
         payload.append('entitaId', selectedCommessa.id);
         payload.append('categoria', 'Contratti Cliente');
-        payload.append('sottocategoria', nomeCliente);
-        payload.append('datiEstrattiJson', JSON.stringify({ tipoDocumento: 'Allegato', nomeCliente, ...(descrizione ? { descrizione } : {}) }));
-        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+        payload.append('sottocategoria', cliente);
+        payload.append('datiEstrattiJson', JSON.stringify({ tipoDocumento: 'Allegato', nomeCliente: cliente, ...(descrizione ? { descrizione } : {}) }));
+        await uploadDocumentoPayload(payload, file.name);
       }
       await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
@@ -591,7 +636,7 @@ export function useDocumenti(
         payload.append('categoria', 'Contratti Fornitori');
         payload.append('sottocategoria', ragioneSociale);
         payload.append('datiEstrattiJson', JSON.stringify({ tipoDocumento: 'Allegato', ragioneSociale, ...(descrizione ? { descrizione } : {}) }));
-        await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
+        await uploadDocumentoPayload(payload, file.name);
       }
       await fetchDocumenti(selectedCommessa.id);
     } catch (err: unknown) {
@@ -642,6 +687,7 @@ export function useDocumenti(
     // handlers
     fetchDocumenti,
     handleDeleteVariante,
+    handleDeleteDocumenti,
     handleReplaceVarianteFile,
     handleUpdateDocStato,
     handleContrattoClienteUpload,

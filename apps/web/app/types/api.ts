@@ -14,12 +14,24 @@ export type StatoPagamento = 'DA_PAGARE' | 'PARZIALE' | 'PAGATO';
 export type TipoDocumentoFiscale = 'FATTURA_ATTIVA' | 'FATTURA_PASSIVA' | 'NOTA_CREDITO';
 export type TipoEntitaDocumento = 'COMMESSA' | 'SAL' | 'FATTURA' | 'FORNITORE';
 
+// ─── Risposte API: Societa' ───────────────────────────────────────────────
+
+export interface ApiSocieta {
+  id: string;
+  codice: string;
+  nome: string;
+  attiva: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ─── Risposte API: Commesse ────────────────────────────────────────────────
 
 export interface ApiFattura {
   id: string;
   tipoDocumento: TipoDocumentoFiscale;
   commessaId: string;
+  societaId: string;
   salId: string | null;
   numero: string | null;
   fornitoreCliente: string | null;
@@ -67,6 +79,7 @@ export interface ApiAttivita {
 /** GET /api/commesse — lista (include fatture + ultimo SAL) */
 export interface ApiCommessaList {
   id: string;
+  societaId: string;
   codiceIdentificativo: string;
   tipoOpera: TipoOpera;
   nomeCantiere: string;
@@ -82,10 +95,10 @@ export interface ApiCommessaList {
   createdAt: string;
   updatedAt: string;
   fatture: ApiFattura[];
-  sals: ApiSal[];
+  sal: ApiSal[];
 }
 
-/** GET /api/commesse/:id — dettaglio (include attivita, appaltoVoci, fatture, sals) */
+/** GET /api/commesse/:id — dettaglio (include attivita, appaltoVoci, fatture, sal) */
 export interface ApiCommessaDetail extends ApiCommessaList {
   attivita: ApiAttivita[];
   appaltoVoci: ApiAppaltoVoce[];
@@ -97,6 +110,7 @@ export interface ApiAppaltoVoce {
   id: string;
   commessaId: string;
   parentId: string | null;
+  societaId: string;
   descrizione: string;
   unitaMisura: string;
   quantita: string; // Decimal → string
@@ -133,6 +147,7 @@ export interface ApiDocumento {
 export interface ApiFornitura {
   id: string;
   commessaId: string;
+  societaId: string;
   fornitoreNome: string;
   importoFornitura: string; // Decimal → string
   descrizione: string | null;

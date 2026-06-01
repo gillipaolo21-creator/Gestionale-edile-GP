@@ -1,13 +1,15 @@
 ﻿'use client';
 import { Activity, Calendar, CheckCircle2, ChevronRight, Layers, Plus, Target, Trash2 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Commessa, Fattura } from '../types/domain';
-import { ExcelColumnPickerModal } from './ExcelColumnPickerModal';
+import { EuroAmountInput } from './EuroAmountInput';
 import type { ColumnMapping } from './ExcelColumnPickerModal';
+import { ExcelColumnPickerModal } from './ExcelColumnPickerModal';
 
 interface AppaltoRow {
   id: string;
   parentId?: string | null;
+  societaId: string;
   descrizione: string;
   unitaMisura: string;
   quantita: string;
@@ -33,6 +35,7 @@ interface TabSintesiProps {
   selectedCommessa: Commessa;
   appaltoRowsFlat: AppaltoRowFlat[];
   isSavingAppalto: boolean;
+  societaOptions: { id: string; nome: string }[];
   onAddRow: () => void;
   onAddChildRow: (parentId: string) => void;
   onUpdateRow: (rowId: string, field: keyof AppaltoRow, value: string) => void;
@@ -42,6 +45,7 @@ interface TabSintesiProps {
   onToggleRow: (rowId: string) => void;
   onSave: () => void;
   onUpdateDataInizioLavori: (date: string | null) => void;
+  onUpdateImportoLavori: (importo: number) => void;
   onImportExcel: (file: File) => void;
   pendingExcelData: { headers: string[]; initialMapping: ColumnMapping } | null;
   onConfirmExcelMapping: (mapping: ColumnMapping) => void;
@@ -52,6 +56,7 @@ export function TabSintesi({
   selectedCommessa,
   appaltoRowsFlat,
   isSavingAppalto,
+  societaOptions,
   onAddRow,
   onAddChildRow,
   onUpdateRow,
@@ -61,6 +66,7 @@ export function TabSintesi({
   onToggleRow,
   onSave,
   onUpdateDataInizioLavori,
+  onUpdateImportoLavori,
   onImportExcel,
   pendingExcelData,
   onConfirmExcelMapping,
@@ -69,7 +75,21 @@ export function TabSintesi({
   const [dataInizioLocal, setDataInizioLocal] = useState(
     selectedCommessa.dataInizio ? selectedCommessa.dataInizio.slice(0, 10) : ''
   );
-  const isDirty = dataInizioLocal !== (selectedCommessa.dataInizio ? selectedCommessa.dataInizio.slice(0, 10) : '');
+  const [importoLavoriLocal, setImportoLavoriLocal] = useState(
+    String(Number(selectedCommessa.importoContratto || 0))
+  );
+
+  useEffect(() => {
+    setDataInizioLocal(selectedCommessa.dataInizio ? selectedCommessa.dataInizio.slice(0, 10) : '');
+    setImportoLavoriLocal(String(Number(selectedCommessa.importoContratto || 0)));
+  }, [selectedCommessa.id, selectedCommessa.dataInizio, selectedCommessa.importoContratto]);
+
+  const isDataInizioDirty = dataInizioLocal !== (selectedCommessa.dataInizio ? selectedCommessa.dataInizio.slice(0, 10) : '');
+  const currentImportoLavori = Number(selectedCommessa.importoContratto || 0);
+  const parsedImportoLavori = Number.parseFloat(importoLavoriLocal.replace(',', '.'));
+  const isImportoValido = Number.isFinite(parsedImportoLavori) && parsedImportoLavori >= 0;
+  const isImportoDirty = isImportoValido && Math.abs(parsedImportoLavori - currentImportoLavori) > 0.0001;
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -116,7 +136,7 @@ export function TabSintesi({
           { label: 'Costi effettivi', value: `€ ${(selectedCommessa.fatture?.reduce((sum: number, f: Fattura) => sum + Number(f.importoImponibile || 0), 0) || 0).toLocaleString('it-IT')}`, color: 'bg-[#4B6E48] text-white', icon: Activity },
           { label: 'Importo lavori', value: `€ ${Number(selectedCommessa.importoContratto).toLocaleString('it-IT')}`, color: 'bg-gray-100 text-[#4B6E48]', icon: Target },
           { label: 'Attività WBS', value: selectedCommessa.attivita?.length || 0, color: 'bg-gray-100 text-[#4B6E48]', icon: Layers },
-          { label: 'Avanzamento', value: `${selectedCommessa.sals?.[0]?.percentualeCompletamento || 0}%`, color: 'bg-gray-100 text-green-600', icon: CheckCircle2 }
+          { label: 'Avanzamento', value: `${selectedCommessa.sal?.[0]?.percentualeCompletamento || 0}%`, color: 'bg-gray-100 text-green-600', icon: CheckCircle2 }
         ].map((box) => (
           <div key={box.label} className={`p-6 rounded-2xl ${box.color} ${box.color.includes('bg-gray-100') ? 'border border-slate-500 shadow-sm' : 'shadow-lg shadow-blue-900/10'}`}>
             <div className="flex justify-between items-start mb-4 text-[8px] font-black uppercase tracking-widest opacity-60">
@@ -139,7 +159,7 @@ export function TabSintesi({
           onChange={(e) => setDataInizioLocal(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-[#4B6E48] focus:outline-none focus:ring-2 focus:ring-[#4B6E48]/30 focus:border-[#4B6E48]"
         />
-        {dataInizioLocal && isDirty && (
+        {dataInizioLocal && isDataInizioDirty && (
           <button
             onClick={() => {
               onUpdateDataInizioLavori(dataInizioLocal);
@@ -149,7 +169,7 @@ export function TabSintesi({
             Conferma inizio lavori
           </button>
         )}
-        {selectedCommessa.dataInizio && !isDirty && (
+        {selectedCommessa.dataInizio && !isDataInizioDirty && (
           <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
             <CheckCircle2 size={12} /> Confermata
           </span>
@@ -161,6 +181,41 @@ export function TabSintesi({
           >
             Rimuovi
           </button>
+        )}
+      </div>
+
+      {/* Importo Lavori */}
+      <div className="bg-gray-100 border border-slate-300 rounded-2xl p-5 shadow-xl shadow-slate-300/50 flex items-center gap-4 flex-wrap">
+        <Target size={16} className="text-[#4B6E48] shrink-0" />
+        <label htmlFor="importo-lavori" className="text-[9px] font-black text-[#4B6E48] uppercase tracking-widest whitespace-nowrap">Importo Lavori (€)</label>
+        <EuroAmountInput
+          id="importo-lavori"
+          min="0"
+          value={importoLavoriLocal}
+          onValueChange={(nextValue) => setImportoLavoriLocal(nextValue)}
+          className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-[#4B6E48] focus:outline-none focus:ring-2 focus:ring-[#4B6E48]/30 focus:border-[#4B6E48]"
+        />
+        {isImportoDirty && (
+          <button
+            onClick={() => {
+              const normalized = Math.round(parsedImportoLavori * 100) / 100;
+              onUpdateImportoLavori(normalized);
+            }}
+            className="px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white bg-[#4B6E48] rounded-lg hover:bg-[#4B6E48] transition-colors"
+          >
+            Conferma importo
+          </button>
+        )}
+        {isImportoDirty && (
+          <button
+            onClick={() => setImportoLavoriLocal(String(currentImportoLavori))}
+            className="text-[9px] font-bold text-gray-600 hover:text-gray-800 uppercase tracking-widest"
+          >
+            Annulla
+          </button>
+        )}
+        {!isImportoValido && importoLavoriLocal.trim().length > 0 && (
+          <span className="text-[10px] font-bold text-red-600">Importo non valido</span>
         )}
       </div>
 
@@ -287,6 +342,17 @@ export function TabSintesi({
                           title={row.descrizione}
                           onChange={(e) => onUpdateRow(row.id, 'descrizione', e.target.value)}
                         />
+                        <select
+                          className="ml-2 bg-gray-100 border border-gray-300 rounded-lg px-2 py-1.5 text-[11px] text-[#4B6E48] font-semibold outline-none focus:border-[#4B6E48]"
+                          value={row.societaId}
+                          onChange={(e) => onUpdateRow(row.id, 'societaId', e.target.value)}
+                          title="Societa"
+                        >
+                          <option value="">Societa...</option>
+                          {societaOptions.map((s) => (
+                            <option key={s.id} value={s.id}>{s.nome}</option>
+                          ))}
+                        </select>
                       </div>
                       <input
                         type="text"
@@ -304,14 +370,12 @@ export function TabSintesi({
                         value={row.quantita}
                         onChange={(e) => onUpdateRow(row.id, 'quantita', e.target.value)}
                       />
-                      <input
-                        type="number"
-                        step="0.01"
+                      <EuroAmountInput
                         disabled={isAggregated}
                         className={`w-full border rounded-lg px-2.5 py-1.5 text-[13px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
                         placeholder="0,00"
                         value={row.prezzoUnitario}
-                        onChange={(e) => onUpdateRow(row.id, 'prezzoUnitario', e.target.value)}
+                        onValueChange={(nextValue) => onUpdateRow(row.id, 'prezzoUnitario', nextValue)}
                       />
                       <div className="text-[13px] font-bold text-[#4B6E48]">
                         € {row.total.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -328,41 +392,33 @@ export function TabSintesi({
                       <div className="text-[13px] font-bold text-[#4B6E48]">
                         € {row.avzEuro.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
-                      <input
-                        type="number"
-                        step="0.01"
+                      <EuroAmountInput
                         disabled={isAggregated}
                         className={`w-full border rounded-lg px-2 py-1.5 text-[12px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
                         placeholder="0,00"
                         value={row.costoPrevisto}
-                        onChange={(e) => onUpdateRow(row.id, 'costoPrevisto', e.target.value)}
+                        onValueChange={(nextValue) => onUpdateRow(row.id, 'costoPrevisto', nextValue)}
                       />
-                      <input
-                        type="number"
-                        step="0.01"
+                      <EuroAmountInput
                         disabled={isAggregated}
                         className={`w-full border rounded-lg px-2 py-1.5 text-[12px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
                         placeholder="auto"
                         value={row.costoEffettivo || (row.costoPrevisto && row.avanzamentoPercent ? String(Math.round((Number(row.costoPrevisto) * Number(row.avanzamentoPercent)) / 100 * 100) / 100) : '')}
-                        onChange={(e) => onUpdateRow(row.id, 'costoEffettivo', e.target.value)}
+                        onValueChange={(nextValue) => onUpdateRow(row.id, 'costoEffettivo', nextValue)}
                       />
-                      <input
-                        type="number"
-                        step="0.01"
+                      <EuroAmountInput
                         disabled={isAggregated}
                         className={`w-full border rounded-lg px-2 py-1.5 text-[12px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
                         placeholder="0,00"
                         value={row.ricavoPrevisto}
-                        onChange={(e) => onUpdateRow(row.id, 'ricavoPrevisto', e.target.value)}
+                        onValueChange={(nextValue) => onUpdateRow(row.id, 'ricavoPrevisto', nextValue)}
                       />
-                      <input
-                        type="number"
-                        step="0.01"
+                      <EuroAmountInput
                         disabled={isAggregated}
                         className={`w-full border rounded-lg px-2 py-1.5 text-[12px] font-semibold outline-none ${isAggregated ? 'bg-slate-600/50 text-gray-600 border-gray-300' : 'bg-gray-100 text-[#4B6E48] border-gray-300 focus:border-[#4B6E48]'}`}
                         placeholder="auto"
                         value={row.ricavoEffettivo || (row.ricavoPrevisto && row.avanzamentoPercent ? String(Math.round((Number(row.ricavoPrevisto) * Number(row.avanzamentoPercent)) / 100 * 100) / 100) : '')}
-                        onChange={(e) => onUpdateRow(row.id, 'ricavoEffettivo', e.target.value)}
+                        onValueChange={(nextValue) => onUpdateRow(row.id, 'ricavoEffettivo', nextValue)}
                       />
                       <div className="flex items-center justify-end gap-1">
                         <button

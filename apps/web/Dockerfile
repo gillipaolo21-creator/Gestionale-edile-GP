@@ -1,4 +1,5 @@
-FROM node:20-alpine AS base
+ARG NODE_VERSION=24
+FROM node:${NODE_VERSION}-alpine AS base
 WORKDIR /app
 RUN npm install -g pnpm
 
@@ -9,11 +10,13 @@ COPY packages/db/package.json ./packages/db/
 RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
+ARG API_BASE_URL=http://api:3001
+ENV API_BASE_URL=$API_BASE_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm --filter web build
 
-FROM node:20-alpine AS runner
+FROM node:${NODE_VERSION}-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/apps/web/.next/standalone ./

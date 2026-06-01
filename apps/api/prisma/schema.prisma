@@ -129,8 +129,32 @@ model User {
   @@map("users")
 }
 
+// -----------------------------------------------------------------------------
+// SOCIETA'
+// -----------------------------------------------------------------------------
+
+model Societa {
+  id            String   @id @default(cuid())
+  codice        String   @unique
+  nome          String
+  attiva        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  commesse      Commessa[]
+  materiali     Materiale[]
+  presenze      PresenzaGiornaliera[]
+  assegnazioni  AssegnazioneMezzo[]
+  contrattiSubappalto ContrattoSubappalto[]
+  fatture       Fattura[]
+  appaltoVoci   AppaltoVoce[]
+
+  @@map("societa")
+}
+
 model Commessa {
   id                   String        @id @default(cuid())
+  societaId            String        @map("societa_id")
   codiceIdentificativo String        @unique @map("codice_identificativo")
   nomeCantiere         String        @map("nome_cantiere")
   committente          String?
@@ -162,8 +186,11 @@ model Commessa {
   scadenzeDocSicurezza DocumentoSicurezza[]
   appaltoVoci          AppaltoVoce[]
 
+  societa              Societa       @relation(fields: [societaId], references: [id], onDelete: Restrict)
+
   @@index([stato])
   @@index([responsabile])
+  @@index([societaId])
   @@map("commesse")
 }
 
@@ -198,6 +225,7 @@ model PresenzaGiornaliera {
   id          String    @id @default(cuid())
   personaleId String    @map("personale_id")
   commessaId  String    @map("commessa_id")
+  societaId   String    @map("societa_id")
   data        DateTime
   oreOrdine   Float     @default(8) @map("ore_ordinarie")
   oreExtra    Float     @default(0) @map("ore_extra")
@@ -206,9 +234,11 @@ model PresenzaGiornaliera {
 
   personale   Personale @relation(fields: [personaleId], references: [id], onDelete: Cascade)
   commessa    Commessa  @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  societa     Societa   @relation(fields: [societaId], references: [id], onDelete: Restrict)
 
   @@unique([personaleId, commessaId, data])
   @@index([commessaId])
+  @@index([societaId])
   @@index([data])
   @@map("presenze_giornaliere")
 }
@@ -277,6 +307,7 @@ model AssegnazioneMezzo {
   id          String    @id @default(cuid())
   mezzoId     String    @map("mezzo_id")
   commessaId  String    @map("commessa_id")
+  societaId   String    @map("societa_id")
   dataInizio  DateTime  @map("data_inizio")
   dataFine    DateTime? @map("data_fine")
   oreImpiegate Float    @default(0) @map("ore_impiegate")
@@ -285,9 +316,11 @@ model AssegnazioneMezzo {
 
   mezzo       Mezzo    @relation(fields: [mezzoId], references: [id], onDelete: Cascade)
   commessa    Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  societa     Societa  @relation(fields: [societaId], references: [id], onDelete: Restrict)
 
   @@index([mezzoId])
   @@index([commessaId])
+  @@index([societaId])
   @@map("assegnazioni_mezzi")
 }
 
@@ -314,6 +347,7 @@ model ScadenzaMezzo {
 model Materiale {
   id              String    @id @default(cuid())
   commessaId      String    @map("commessa_id")
+  societaId       String    @map("societa_id")
   fornitoreNome   String    @map("fornitore_nome")
   descrizione     String
   unitaMisura     String    @map("unita_misura")
@@ -326,8 +360,10 @@ model Materiale {
   updatedAt       DateTime  @updatedAt @map("updated_at")
 
   commessa        Commessa  @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  societa         Societa   @relation(fields: [societaId], references: [id], onDelete: Restrict)
 
   @@index([commessaId])
+  @@index([societaId])
   @@map("materiali")
 }
 
@@ -360,6 +396,7 @@ model ContrattoSubappalto {
   id                  String         @id @default(cuid())
   commessaId          String         @map("commessa_id")
   subappaltatoreId    String         @map("subappaltatore_id")
+  societaId           String         @map("societa_id")
   descrizioneOpera    String         @map("descrizione_opera")
   importoAffidato     Float          @map("importo_affidato")
   dataInizio          DateTime?      @map("data_inizio")
@@ -370,10 +407,12 @@ model ContrattoSubappalto {
 
   commessa            Commessa       @relation(fields: [commessaId], references: [id], onDelete: Cascade)
   subappaltatore      Subappaltatore @relation(fields: [subappaltatoreId], references: [id])
+  societa             Societa        @relation(fields: [societaId], references: [id], onDelete: Restrict)
   sal                 Sal[]
 
   @@index([commessaId])
   @@index([subappaltatoreId])
+  @@index([societaId])
   @@map("contratti_subappalto")
 }
 
@@ -413,6 +452,7 @@ model Fattura {
   id                String               @id @default(cuid())
   tipoDocumento     TipoDocumentoFiscale @map("tipo_documento")
   commessaId        String               @map("commessa_id")
+  societaId         String               @map("societa_id")
   salId             String?              @map("sal_id")
   numero            String?
   fornitoreCliente  String?              @map("fornitore_cliente")
@@ -426,9 +466,11 @@ model Fattura {
   updatedAt         DateTime             @updatedAt @map("updated_at")
 
   commessa          Commessa             @relation(fields: [commessaId], references: [id], onDelete: Restrict)
+  societa           Societa              @relation(fields: [societaId], references: [id], onDelete: Restrict)
   sal               Sal?                 @relation(fields: [salId], references: [id])
 
   @@index([commessaId])
+  @@index([societaId])
   @@index([statoPagamento])
   @@map("fatture")
 }
@@ -491,6 +533,7 @@ model AppaltoVoce {
   id                 String   @id @default(cuid())
   commessaId         String   @map("commessa_id")
   parentId           String?  @map("parent_id")
+  societaId          String   @map("societa_id")
   descrizione        String   @default("")
   unitaMisura        String   @default("") @map("unita_misura")
   quantita           Float    @default(0)
@@ -504,8 +547,10 @@ model AppaltoVoce {
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   commessa Commessa @relation(fields: [commessaId], references: [id], onDelete: Cascade)
+  societa  Societa  @relation(fields: [societaId], references: [id], onDelete: Restrict)
 
   @@index([commessaId])
+  @@index([societaId])
   @@map("appalto_voci")
 }
 

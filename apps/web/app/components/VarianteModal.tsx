@@ -2,6 +2,7 @@
 
 import { X } from 'lucide-react';
 import React from 'react';
+import { EuroAmountInput } from './EuroAmountInput';
 
 export type VarianteVoce = { fornitore: string; descrizione: string; um: string; qty: string; prezzoUnit: string };
 
@@ -109,13 +110,15 @@ export function VarianteModal({
                       value={voce.qty}
                       onChange={e => { const v = [...form.voci]; v[i] = { ...v[i], qty: e.target.value }; setForm({ ...form, voci: v }); }}
                     />
-                    <input
-                      type="number"
-                      step="0.01"
+                    <EuroAmountInput
                       placeholder="0,00"
                       className="px-2 py-2 text-xs text-[#4B6E48] bg-transparent outline-none focus:bg-blue-50/50 border-r border-stone-100 w-full"
                       value={voce.prezzoUnit}
-                      onChange={e => { const v = [...form.voci]; v[i] = { ...v[i], prezzoUnit: e.target.value }; setForm({ ...form, voci: v }); }}
+                      onValueChange={(nextValue) => {
+                        const v = [...form.voci];
+                        v[i] = { ...v[i], prezzoUnit: nextValue };
+                        setForm({ ...form, voci: v });
+                      }}
                     />
                     <div className="px-2 py-2 text-xs font-black text-[#4B6E48] flex items-center justify-between gap-1">
                       <span>{totale !== 0 ? totale.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}</span>

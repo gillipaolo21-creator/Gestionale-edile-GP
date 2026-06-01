@@ -21,6 +21,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Documento, TipoEntitaDocumento } from '@prisma/client';
 import { Response } from 'express';
 import { memoryStorage } from 'multer';
+import * as path from 'node:path';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { DocumentiService } from './documenti.service';
 import { UploadDocumentoDto } from './dto/upload-documento.dto';
@@ -40,7 +41,38 @@ const ALLOWED_MIME_TYPES = new Set([
   'application/zip',
   'application/x-zip-compressed',
   'application/octet-stream', // .dwg e altri file CAD
+  'application/dxf',
+  'application/x-dxf',
+  'application/acad',
+  'application/x-acad',
+  'application/x-autocad',
+  'image/vnd.dwg',
+  'application/vnd.dwg',
+  'application/x-dwg',
 ]);
+
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf',
+  '.docx',
+  '.doc',
+  '.xlsx',
+  '.xls',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.txt',
+  '.zip',
+  '.dwg',
+  '.dxf',
+]);
+
+const isAllowedUploadFile = (file: { mimetype?: string; originalname?: string }): boolean => {
+  const mimeType = (file.mimetype || '').toLowerCase();
+  const ext = path.extname(file.originalname || '').toLowerCase();
+  return ALLOWED_MIME_TYPES.has(mimeType) || ALLOWED_EXTENSIONS.has(ext);
+};
 
 const MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024; // 50 MB – limite esplicito documentale // NOSONAR:typescript:S5693
 
@@ -148,10 +180,11 @@ export class DocumentiController {
       storage: memoryStorage(),
       limits: { fileSize: MAX_FILE_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
-        if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        if (isAllowedUploadFile(file)) {
           cb(null, true);
         } else {
-          cb(new BadRequestException(`Tipo file non consentito: ${file.mimetype}`), false);
+          const ext = path.extname(file.originalname || '').toLowerCase() || '(senza estensione)';
+          cb(new BadRequestException(`Tipo file non consentito: ${file.mimetype || '(mime vuoto)'} (${ext})`), false);
         }
       },
     }),
@@ -180,10 +213,11 @@ export class DocumentiController {
       storage: memoryStorage(),
       limits: { fileSize: MAX_FILE_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
-        if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        if (isAllowedUploadFile(file)) {
           cb(null, true);
         } else {
-          cb(new BadRequestException(`Tipo file non consentito: ${file.mimetype}`), false);
+          const ext = path.extname(file.originalname || '').toLowerCase() || '(senza estensione)';
+          cb(new BadRequestException(`Tipo file non consentito: ${file.mimetype || '(mime vuoto)'} (${ext})`), false);
         }
       },
     }),
@@ -201,6 +235,11 @@ export class DocumentiController {
       ? payload.sottocategoria.replace(/[/\\.]/g, '_')
       : undefined;
 
+    // Manteniamo solo un percorso relativo "pulito" per import cartelle.
+    const safeRelativePath = payload.relativePath
+      ? payload.relativePath.split('\\').join('/').replace(/^\/+/, '')
+      : undefined;
+
     return this.documentiService.uploadAndSave(
       file,
       payload.entitaTipo,
@@ -208,6 +247,7 @@ export class DocumentiController {
       payload.categoria,
       safeSottocategoria,
       payload.datiEstrattiJson,
+      safeRelativePath,
     );
   }
 }

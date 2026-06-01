@@ -1,8 +1,11 @@
 ﻿'use client';
 import { X } from 'lucide-react';
 import React from 'react';
+import type { Societa } from '../types/domain';
+import { EuroAmountInput } from './EuroAmountInput';
 
 interface MaterialForm {
+  societaId: string;
   fornitoreNome: string;
   importoFornitura: string;
   descrizione: string;
@@ -11,6 +14,7 @@ interface MaterialForm {
 }
 
 interface ServiceForm {
+  societaId: string;
   fornitoreNome: string;
   importoFornitura: string;
   descrizione: string;
@@ -19,6 +23,7 @@ interface ServiceForm {
 }
 
 interface FornituraModalsProps {
+  societaOptions: Societa[];
   showMaterialModal: boolean;
   materialForm: MaterialForm;
   setMaterialForm: React.Dispatch<React.SetStateAction<MaterialForm>>;
@@ -39,6 +44,7 @@ interface FornituraModalsProps {
 }
 
 export function FornituraModals({
+  societaOptions,
   showMaterialModal, materialForm, setMaterialForm, materialFile, setMaterialFile, isSavingMaterial, onMaterialClose, onMaterialSubmit,
   showServiceModal, serviceForm, setServiceForm, serviceFile, setServiceFile, isSavingService, onServiceClose, onServiceSubmit,
 }: FornituraModalsProps) {
@@ -58,6 +64,20 @@ export function FornituraModals({
             </div>
             <form onSubmit={onMaterialSubmit} className="p-8 space-y-5">
               <div className="space-y-2">
+                <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Societa</label>
+                <select
+                  required
+                  className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors"
+                  value={materialForm.societaId}
+                  onChange={e => setMaterialForm({ ...materialForm, societaId: e.target.value })}
+                >
+                  <option value="">Seleziona societa...</option>
+                  {societaOptions.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
                 <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Fornitore</label>
                 <input required type="text" className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors" value={materialForm.fornitoreNome} onChange={e => setMaterialForm({ ...materialForm, fornitoreNome: e.target.value })} />
               </div>
@@ -66,7 +86,7 @@ export function FornituraModals({
                   <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Importo Fornitura</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-800 font-bold text-sm">€</span>
-                    <input required type="number" step="0.01" className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors" value={materialForm.importoFornitura} onChange={e => setMaterialForm({ ...materialForm, importoFornitura: e.target.value })} />
+                    <EuroAmountInput required className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors" value={materialForm.importoFornitura} onValueChange={(nextValue) => setMaterialForm({ ...materialForm, importoFornitura: nextValue })} />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -111,6 +131,20 @@ export function FornituraModals({
             </div>
             <form onSubmit={onServiceSubmit} className="p-8 space-y-5">
               <div className="space-y-2">
+                <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Societa</label>
+                <select
+                  required
+                  className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors"
+                  value={serviceForm.societaId}
+                  onChange={e => setServiceForm({ ...serviceForm, societaId: e.target.value })}
+                >
+                  <option value="">Seleziona societa...</option>
+                  {societaOptions.map((s) => (
+                    <option key={s.id} value={s.id}>{s.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
                 <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Fornitore</label>
                 <input required type="text" className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl px-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors" value={serviceForm.fornitoreNome} onChange={e => setServiceForm({ ...serviceForm, fornitoreNome: e.target.value })} />
               </div>
@@ -119,7 +153,7 @@ export function FornituraModals({
                   <label className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Importo Servizio</label>
                   <div className="relative">
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-800 font-bold text-sm">€</span>
-                    <input required type="number" step="0.01" className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors" value={serviceForm.importoFornitura} onChange={e => setServiceForm({ ...serviceForm, importoFornitura: e.target.value })} />
+                    <EuroAmountInput required className="w-full bg-[#F2F0EF] border border-slate-500 rounded-xl pl-8 pr-4 py-3 text-sm font-bold text-[#4B6E48] outline-none focus:border-[#4B6E48] transition-colors" value={serviceForm.importoFornitura} onValueChange={(nextValue) => setServiceForm({ ...serviceForm, importoFornitura: nextValue })} />
                   </div>
                 </div>
                 <div className="space-y-2">

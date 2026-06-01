@@ -63,6 +63,7 @@ export class MezziService {
       data: {
         mezzoId,
         commessaId: dto.commessaId,
+        societaId: dto.societaId,
         dataInizio: new Date(dto.dataInizio),
         dataFine: dto.dataFine ? new Date(dto.dataFine) : undefined,
         oreImpiegate: dto.oreImpiegate,

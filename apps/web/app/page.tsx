@@ -26,6 +26,7 @@ import { useCommesse } from './hooks/useCommesse';
 import { useDocumenti } from './hooks/useDocumenti';
 import { useForniture } from './hooks/useForniture';
 import { useJobPolling } from './hooks/useJobPolling';
+import { useSocieta } from './hooks/useSocieta';
 import type { ActiveTab } from './types/domain';
 
 export default function App() {
@@ -42,10 +43,22 @@ export default function App() {
   }, [authLoading, token]);
 
   const commesse = useCommesse(baseUrl, setError);
-  const appalto = useAppaltoVoci(baseUrl, commesse.selectedCommessa?.id ?? null, setError);
-  const forniture = useForniture(baseUrl, commesse.selectedCommessa, setError);
+  const societa = useSocieta(baseUrl, setError);
+  const defaultSocietaId = commesse.selectedCommessa?.societaId ?? societa.societa[0]?.id ?? null;
+  const appalto = useAppaltoVoci(baseUrl, commesse.selectedCommessa?.id ?? null, defaultSocietaId, setError);
+  const forniture = useForniture(baseUrl, commesse.selectedCommessa, defaultSocietaId, setError);
   const documenti = useDocumenti(baseUrl, commesse.selectedCommessa, setError);
   const jobs = useJobPolling(baseUrl);
+
+  useEffect(() => {
+    if (!societa.societa.length) return;
+    if (!commesse.formData.societaId) {
+      commesse.setFormData((prev) => ({ ...prev, societaId: societa.societa[0].id }));
+    }
+    if (!commesse.importFormData.societaId) {
+      commesse.setImportFormData((prev) => ({ ...prev, societaId: societa.societa[0].id }));
+    }
+  }, [societa.societa, commesse.formData.societaId, commesse.importFormData.societaId]);
 
   // Documenti Pending
   const [pendingDocs, setPendingDocs] = useState<any[]>([]);
@@ -291,6 +304,7 @@ export default function App() {
                 selectedCommessa={commesse.selectedCommessa}
                 appaltoRowsFlat={appalto.appaltoRowsFlat}
                 isSavingAppalto={appalto.isSavingAppalto}
+                societaOptions={societa.societa}
                 onAddRow={appalto.handleAddAppaltoRow}
                 onAddChildRow={appalto.handleAddAppaltoChildRow}
                 onUpdateRow={appalto.handleUpdateAppaltoRow}
@@ -300,6 +314,7 @@ export default function App() {
                 onToggleRow={appalto.toggleAppaltoRow}
                 onSave={appalto.handleSaveAppaltoRows}
                 onUpdateDataInizioLavori={commesse.handleUpdateDataInizioLavori}
+                onUpdateImportoLavori={commesse.handleUpdateImportoLavori}
                 onImportExcel={appalto.handleImportAppaltoExcel}
                 pendingExcelData={appalto.pendingExcelData}
                 onConfirmExcelMapping={appalto.handleConfirmExcelMapping}
@@ -322,6 +337,7 @@ export default function App() {
                 onAllegatiClienteUpload={documenti.handleAllegatiClienteUpload}
                 onAllegatiFornitoreUpload={documenti.handleAllegatiFornitoreUpload}
                 onReplaceVarianteFile={documenti.handleReplaceVarianteFile}
+                onDeleteDocumenti={documenti.handleDeleteDocumenti}
                 onCreateFornitore={() => documenti.setShowCreateFornitoreModal(true)}
               />
             )}
@@ -341,6 +357,8 @@ export default function App() {
               <TabContabilita
                 commessaId={commesse.selectedCommessa.id}
                 baseUrl={baseUrl}
+                societaOptions={societa.societa}
+                defaultSocietaId={defaultSocietaId}
               />
             )}
           </div>
@@ -355,6 +373,7 @@ export default function App() {
         submitting={commesse.submitting}
         formData={commesse.formData}
         setFormData={commesse.setFormData}
+        societaOptions={societa.societa}
         pmFolders={commesse.pmFolders}
         pmMode={commesse.pmMode}
         setPmMode={commesse.setPmMode}
@@ -367,6 +386,7 @@ export default function App() {
         submitting={commesse.importSubmitting}
         formData={commesse.importFormData}
         setFormData={commesse.setImportFormData}
+        societaOptions={societa.societa}
         onClose={() => commesse.setShowImportModal(false)}
         onSubmit={commesse.handleImportCommessa}
         pmFolders={commesse.importPmFolders}
@@ -407,6 +427,7 @@ export default function App() {
       />
 
       <FornituraModals
+        societaOptions={societa.societa}
         showMaterialModal={forniture.showMaterialModal}
         onMaterialClose={() => forniture.setShowMaterialModal(false)}
         showServiceModal={forniture.showServiceModal}

@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Fattura, Prisma, StatoPagamento, TipoDocumentoFiscale } from '@prisma/client';
-import { PrismaService } from './prisma/prisma.service';
 import { CreateFatturaDto, UpdateFatturaDto } from './fatture.dto';
+import { PrismaService } from './prisma/prisma.service';
 
 @Injectable()
 export class FattureService {
@@ -30,6 +30,7 @@ export class FattureService {
         data: {
           tipoDocumento: dto.tipoDocumento,
           commessaId: dto.commessaId,
+          societaId: dto.societaId,
           salId: dto.salId,
           numero: dto.numero,
           fornitoreCliente: dto.fornitoreCliente,

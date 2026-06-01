@@ -5,6 +5,7 @@ import type { ActiveTab, Commessa, Fattura } from '../types/domain';
 import { apiFetch } from './apiFetch';
 
 const defaultImportFormData = (): ImportFormData => ({
+  societaId: '',
   codiceIdentificativo: '',
   nomeCliente: '',
   tipoOpera: '',
@@ -22,6 +23,7 @@ const defaultImportFormData = (): ImportFormData => ({
 });
 
 type FormData = {
+  societaId: string;
   codiceIdentificativo: string;
   tipoLavori: string;
   nomeCliente: string;
@@ -33,6 +35,7 @@ type FormData = {
 };
 
 const defaultFormData = (): FormData => ({
+  societaId: '',
   codiceIdentificativo: '',
   tipoLavori: '',
   nomeCliente: '',
@@ -224,6 +227,7 @@ export function useCommesse(
       await apiFetch(`${baseUrl}/api/commesse`, {
         method: 'POST',
         body: JSON.stringify({
+          societaId: formData.societaId,
           codiceIdentificativo: formData.codiceIdentificativo,
           tipoLavori: formData.tipoLavori,
           nomeCantiere: `${formData.codiceIdentificativo} - ${formData.citta || formData.indirizzo}`,
@@ -263,6 +267,7 @@ export function useCommesse(
       const newCommessa = await apiFetch<{ id: string }>(`${baseUrl}/api/commesse`, {
         method: 'POST',
         body: JSON.stringify({
+          societaId: importFormData.societaId,
           codiceIdentificativo: importFormData.codiceIdentificativo,
           nomeCliente: importFormData.nomeCliente,
           committente: importFormData.nomeCliente,
@@ -302,6 +307,10 @@ export function useCommesse(
           payload.append('entitaTipo', 'COMMESSA');
           payload.append('entitaId', newCommessa.id);
           payload.append('categoria', 'Documentazione Progettuale');
+          const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+          if (relativePath) {
+            payload.append('relativePath', relativePath);
+          }
           await apiFetch(`${baseUrl}/api/documenti/upload`, { method: 'POST', body: payload });
         }
       }
@@ -394,6 +403,29 @@ export function useCommesse(
     }
   };
 
+  const handleUpdateImportoLavori = async (importo: number) => {
+    if (!selectedCommessa) return;
+
+    try {
+      const updated = await apiFetch<Commessa>(`${baseUrl}/api/commesse/${selectedCommessa.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ importoContratto: importo }),
+      });
+
+      setSelectedCommessa((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          importoContratto: (updated as unknown as { importoContratto?: string | number }).importoContratto ?? importo,
+        } as Commessa;
+      });
+
+      fetchCommesse(page);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Errore durante l\'aggiornamento importo lavori');
+    }
+  };
+
   // Fallback stats calcolate dalla pagina corrente se l'API non ha ancora risposto
   const localStats = useMemo(() => {
     const totaleCommesse = commesse.reduce((acc, c) => acc + Number((c as any).importoContratto || 0), 0);
@@ -402,7 +434,7 @@ export function useCommesse(
       return acc + costi;
     }, 0);
     const avanzamento = commesse.length > 0
-      ? commesse.reduce((acc, c) => acc + Number(c.sals?.[0]?.percentualeCompletamento || 0), 0) / commesse.length
+      ? commesse.reduce((acc, c) => acc + Number(c.sal?.[0]?.percentualeCompletamento || 0), 0) / commesse.length
       : 0;
     return { totaleCommesse, costiCommesse, avanzamento: avanzamento.toFixed(1) };
   }, [commesse]);
@@ -450,6 +482,7 @@ export function useCommesse(
     handleDeleteCommessa,
     handleDeleteFromHome,
     handleUpdateDataInizioLavori,
+    handleUpdateImportoLavori,
     stats,
     page,
     totalPages,
